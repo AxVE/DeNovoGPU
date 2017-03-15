@@ -17,4 +17,5 @@ Attention, la plupart des configurations pointent la commande _time_ sur un viei
 Vous pouvez essayer _/usr/bin/time_.
 
 Un exemple d'utilisation :
+
 `/usr/bin/time -f "\nTime:\t%E\nMem:\t%M KB" ./Bin/denovoGPU -f Data/reads_test.fasta -t 6`
