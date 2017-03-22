@@ -20,6 +20,9 @@ class WorkerCL {
 		cl::Context m_context;
 		cl::Program::Sources m_sources;
 		cl::Program m_program;
+
+		//CL kernel
+		static std::string kernel_cmp_2_contigs;
 };
 
 

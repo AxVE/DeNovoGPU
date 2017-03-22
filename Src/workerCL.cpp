@@ -94,3 +94,9 @@ void WorkerCL::list_infos(Log& output){
 		}
 	}
 }	
+
+string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
+	kernel void cmp_2_contigs(){
+		int i = 0;
+	}
+)CLCODE";
