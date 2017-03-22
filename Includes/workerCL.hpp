@@ -18,7 +18,7 @@ class WorkerCL {
 		cl::Platform m_platform;
 		cl::Device m_device;
 		cl::Context m_context;
-		cl::Program::Sources m_sources;
+		//cl::Program::Sources m_sources;
 		cl::Program m_program;
 
 		//CL kernel

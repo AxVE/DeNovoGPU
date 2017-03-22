@@ -38,9 +38,13 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 	//Create context
 	m_context = cl::Context({m_device});
 
-	//CL code
-	
 	//Build kernel sources
+	m_program = cl::Program(m_context, kernel_cmp_2_contigs);
+	if(m_program.build({m_device}) != CL_SUCCESS){
+		string error = "Error building: ";
+		error += m_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device);
+		throw(error);
+	}
 	
 }
 
@@ -64,7 +68,7 @@ void WorkerCL::list_infos(Log& output){
 	output.write(txt);
 	for(size_t i=0; i < platforms.size(); i++){
 		cl::Platform& p = platforms[i];
-		txt = to_string(i);
+
 		txt += "\t" + p.getInfo<CL_PLATFORM_NAME>();
 		txt += "\t" + p.getInfo<CL_PLATFORM_PROFILE>();
 		txt += "\t" + p.getInfo<CL_PLATFORM_VENDOR>();
