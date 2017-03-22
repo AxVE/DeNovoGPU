@@ -3,6 +3,10 @@ L'objectif de ce projet est de tester si les GPU récents peuvent supporter la c
 d'un assemblage DeNovo.
 Le but actuel n'est **pas** de créer un nouvel outil.
 
+## Pré-requis
+- **_g++_:** g++ (GCC) 6.3.1 20170109 (support de c++14)
+- **_OpenCL_:** 2.1
+
 ## Principe simplifié
 Le principe de base est simpliste :
 1. On récupère les reads, chaque reads est considéré comme un contig.
