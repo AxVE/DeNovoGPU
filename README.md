@@ -25,7 +25,9 @@ Un exemple d'utilisation :
 
 `/usr/bin/time -f "\nTime:\t%E\nMem:\t%M KB" ./Bin/denovoGPU -f Data/reads_test.fasta -t 6`
 
-## Todo list
+## Liste de tâches
+- [x] Test en multithreading
+- [ ] Implémentation OpenCL et test
 - [ ] Output des contigs finaux
 - [ ] Retravaille des contigs finaux pour avoir plus de précisions (en mappant les reads du contigs sur le contigs puis travail par profondeur).
 - [ ] Stocker et manipuler les nucléotides des contigs sur 4 bits (soit 2 par char) plutôt que 1 par char.
@@ -38,4 +40,5 @@ Par exemple :
 	- 1111: X
 	- 1011: H
 	- ...
+- [ ] Multiple formats fichiers entrants (détection automatique)
 
