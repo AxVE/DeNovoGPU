@@ -25,7 +25,7 @@ Un exemple d'utilisation :
 
 `/usr/bin/time -f "\nTime:\t%E\nMem:\t%M KB" ./Bin/denovoGPU -f Data/reads_test.fasta -t 6`
 
-## Liste de tâches
+## Liste de tâches
 - [x] Test en multithreading
 - [ ] Implémentation OpenCL et test
 - [ ] Output des contigs finaux
