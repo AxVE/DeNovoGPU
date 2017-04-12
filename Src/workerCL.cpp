@@ -99,6 +99,12 @@ void WorkerCL::list_infos(Log& output){
 	}
 }	
 
+/*
+Les balises 'R"CLCODE(' et ')CLCODE'   (du type R"NAME( ... )NAME") servent à définir un
+string litéral brut. C'est utile pour avoir un string sur plusieurs ligne, comme un code,
+et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
+*/
+
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	kernel void cmp_2_contigs(){
 		int i = 0;
