@@ -5,12 +5,17 @@
 #include <CL/cl.hpp> //version 1.2
 
 #include "log.hpp"
+#include "reads.hpp"
 
 
 class WorkerCL {
 	public:
 		WorkerCL(size_t platform_id=0, size_t device_id=0);
 		~WorkerCL();
+
+		//Return the matrix of coupling scores of a contigs set
+		void run(Contigs contigs);
+		
 		static void list_infos(Log& output);
 
 	private:

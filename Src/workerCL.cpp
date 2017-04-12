@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "log.hpp"
+#include "reads.hpp"
 
 using namespace std;
 
@@ -49,6 +50,44 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 }
 
 WorkerCL::~WorkerCL(){
+}
+
+void WorkerCL::run(Contigs contigs){
+	/*
+	Create the string containing all contigs sequences
+	and store the list of contigs size (in same orders)
+	to be able to retrieve contigs. Ssize is store in
+	an ulong to be sure it is 64bits as cl_ulong
+	*/
+
+	//Get list of contigs size and the total length of the
+	//contigs concatenation
+	unsigned long nbContigs = contigs.get_nbContigs();
+	unsigned long ultraSequenceSize = 0;
+	vector<unsigned long> contigs_size (nbContigs, 0);
+	for(unsigned long i=0; i < nbContigs; i++){
+		contigs_size[i] = contigs.get_sizeContig(i);
+		ultraSequenceSize += contigs_size[i];
+	}
+
+	//Create the ultraSequence
+	char* ultraSequence = new char[ultraSequenceSize];
+	unsigned long i = 0;
+		//Get each contigs sequence and add it in ultraSequence
+	for(c=0; c < nbContigs; c++){
+		string seq = contigs.get_seqContig(c);
+		for(size_t j=0; j < seq.size();j++){
+			ultraSequence[i] = seq[j];
+			i++
+		}
+	}
+
+	//Do GPU run
+
+
+	//Clean the memory
+	delete ultraSequence;
+
 }
 
 void WorkerCL::list_infos(Log& output){
