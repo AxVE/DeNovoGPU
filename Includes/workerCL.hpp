@@ -23,9 +23,11 @@ class WorkerCL {
 		cl::Platform m_platform;
 		cl::Device m_device;
 		cl::Context m_context;
+		cl::CommandQueue m_commandqueue; //To send order/demand to gpu
 		//cl::Program::Sources m_sources;
 		cl::Program m_program;
 		cl::Kernel m_kernel;
+		
 
 		//CL kernel
 		static std::string kernel_cmp_2_contigs;

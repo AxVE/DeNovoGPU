@@ -38,6 +38,9 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 
 	//Create context
 	m_context = cl::Context({m_device});
+	
+	//initialize commands queue
+	m_commandqueue = cl::CommandQueue(m_context, m_device);
 
 	//Build kernel sources
 	m_program = cl::Program(m_context, kernel_cmp_2_contigs);
@@ -50,6 +53,7 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 
 	//Make the kernel
 	m_kernel = cl::Kernel(m_program, "cmp_2_contigs");
+
 }
 
 WorkerCL::~WorkerCL(){
