@@ -47,6 +47,9 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 		throw(error);
 	}
 	
+
+	//Make the kernel
+	m_kernel = cl::Kernel(m_program, "cmp_2_contigs");
 }
 
 WorkerCL::~WorkerCL(){
@@ -81,9 +84,14 @@ void WorkerCL::run(Contigs contigs){
 			i++;
 		}
 	}
+	cout << "UltraSequence:" << endl;
+	cout << ultraSequence << endl;
 
-	//Do GPU run
-
+	//Prepare GPU buffers for the run
+		//infos (64bits): nbcontigs
+	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, 64);
+	m_kernel.setArg(0, buf_infos);
+	
 
 	//Clean the memory
 	delete ultraSequence;
