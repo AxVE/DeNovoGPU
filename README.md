@@ -36,6 +36,7 @@ Un exemple d'utilisation :
 - [ ] Implémentation OpenCL et test
 - [ ] Nettoyage du code et commentaires
 - [ ] Output des contigs finaux
+- [ ] Ne plus stocker en RAM les reads (pas les contigs) car ils ne sont utilisés que 2 fois : à l'initialisation des contigs et au peaufinage de ceux-ci à la fin.
 - [ ] Retravaille des contigs finaux pour avoir plus de précisions (en mappant les reads du contigs sur le contigs puis travail par profondeur).
 - [ ] Stocker et manipuler les nucléotides des contigs sur 4 bits (soit 2 par char) plutôt que 1 par char.
 Cela permet de réduire la charge mémoire sans perte d'information (IUPAC code) : chaque bit d'un 4 bits représente la possibilité d'avoir tel nucléotide à cet position.
