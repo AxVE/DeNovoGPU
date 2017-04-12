@@ -74,11 +74,11 @@ void WorkerCL::run(Contigs contigs){
 	char* ultraSequence = new char[ultraSequenceSize];
 	unsigned long i = 0;
 		//Get each contigs sequence and add it in ultraSequence
-	for(c=0; c < nbContigs; c++){
+	for(unsigned long c=0; c < nbContigs; c++){
 		string seq = contigs.get_seqContig(c);
 		for(size_t j=0; j < seq.size();j++){
 			ultraSequence[i] = seq[j];
-			i++
+			i++;
 		}
 	}
 
