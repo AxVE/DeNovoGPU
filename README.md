@@ -2,6 +2,12 @@
 L'objectif de ce projet est de tester si les GPU récents peuvent supporter la charge mémoire (avec un algorithme adapté)
 d'un assemblage DeNovo.
 Le but actuel n'est **pas** de créer un nouvel outil.
+Il existe déjà des outils (généralement basés sur des graphes de De-Bruijn) exploitant à certains moments la technologie GPU.
+Une liste non-exhaustive :
+- Velvet
+- SOAP
+- Abyss
+- Ray
 
 ## Pré-requis
 - **g++:** g++ (GCC) 6.3.1 20170109 (support de c++14)
