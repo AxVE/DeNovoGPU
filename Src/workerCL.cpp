@@ -94,8 +94,10 @@ void WorkerCL::run(Contigs contigs){
 	//Prepare GPU for the run
 	cl::Event ev;
 		//infos buffer (64bits): nbcontigs
-	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, 64);
-	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, 64, ultraSequenceSize);
+		//buffer only accepts non-dynamics arrays (even of size 1)
+	uint64_t infos[1] = {ultraSequenceSize};
+	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
+	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), infos);
 
 	//Update the kernel (gpu function)
 	m_kernel.setArg(0, buf_infos);
