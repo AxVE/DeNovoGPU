@@ -28,6 +28,7 @@ Un exemple d'utilisation :
 ## Liste de tâches
 - [x] Test en multithreading
 - [ ] Implémentation OpenCL et test
+- [ ] Nettoyage du code et commentaires
 - [ ] Output des contigs finaux
 - [ ] Retravaille des contigs finaux pour avoir plus de précisions (en mappant les reads du contigs sur le contigs puis travail par profondeur).
 - [ ] Stocker et manipuler les nucléotides des contigs sur 4 bits (soit 2 par char) plutôt que 1 par char.
