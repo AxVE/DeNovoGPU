@@ -117,7 +117,6 @@ int main(int argc, char* argv[]){
 		nbContigs = contigs.get_nbContigs();
 		vector< vector< int8_t > > scores = vector< vector<int8_t> >(nbContigs, vector<int8_t>(nbContigs, 0));
 
-
 			//For each read against each read
 		if(params.nbthreads > 1){ //using multithreading (threads will be destroyed at the end)
 			vector<thread> workers;
