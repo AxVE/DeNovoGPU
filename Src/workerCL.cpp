@@ -63,25 +63,25 @@ void WorkerCL::run(Contigs contigs){
 	/*
 	Create the string containing all contigs sequences
 	and store the list of contigs size (in same orders)
-	to be able to retrieve contigs. Ssize is store in
-	an ulong to be sure it is 64bits as cl_ulong
+	to be able to retrieve contigs. Size is store in
+	an uint64_t (ulong) to be sure it is 64bits as cl_ulong
 	*/
 
 	//Get list of contigs size and the total length of the
 	//contigs concatenation
-	unsigned long nbContigs = contigs.get_nbContigs();
-	unsigned long ultraSequenceSize = 0;
-	vector<unsigned long> contigs_size (nbContigs, 0);
-	for(unsigned long i=0; i < nbContigs; i++){
+	uint64_t nbContigs = contigs.get_nbContigs();
+	uint64_t ultraSequenceSize = 0;
+	vector<uint64_t> contigs_size (nbContigs, 0);
+	for(uint64_t i=0; i < nbContigs; i++){
 		contigs_size[i] = contigs.get_sizeContig(i);
 		ultraSequenceSize += contigs_size[i];
 	}
 
 	//Create the ultraSequence
 	char* ultraSequence = new char[ultraSequenceSize];
-	unsigned long i = 0;
+	uint64_t i = 0;
 		//Get each contigs sequence and add it in ultraSequence
-	for(unsigned long c=0; c < nbContigs; c++){
+	for(uint64_t c=0; c < nbContigs; c++){
 		string seq = contigs.get_seqContig(c);
 		for(size_t j=0; j < seq.size();j++){
 			ultraSequence[i] = seq[j];
@@ -91,10 +91,18 @@ void WorkerCL::run(Contigs contigs){
 	cout << "UltraSequence:" << endl;
 	cout << ultraSequence << endl;
 
-	//Prepare GPU buffers for the run
-		//infos (64bits): nbcontigs
+	//Prepare GPU for the run
+	cl::Event ev;
+		//infos buffer (64bits): nbcontigs
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, 64);
+	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, 64, ultraSequenceSize);
+
+	//Update the kernel (gpu function)
 	m_kernel.setArg(0, buf_infos);
+
+	//Run the kernel and wait the end
+	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NullRange, cl::NullRange, NULL, &ev);
+	ev.wait();
 	
 
 	//Clean the memory
