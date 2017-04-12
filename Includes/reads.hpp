@@ -96,7 +96,11 @@ class Contigs {
 			//Get the sequence of a contig
 		std::string get_seqContig(size_t contigID) const {
 			return m_contigs_list[contigID]->c_seq;
-		}; 
+		};
+			//Get the size of the sequence of a contig
+		size_t get_sizeContig(size_t contigID) const {
+			return m_contigs_list[contigID]->c_seq.size();
+		};
 
 		//Setters
 			//Merge 2 contigs (the 2nd is merged in the first)
