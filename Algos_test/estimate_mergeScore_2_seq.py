@@ -1,14 +1,16 @@
 #! /usr/bin/python3
 
 import sys #Arguments gathering, exit script, ...
+from Bio import SeqIO #Biopython, use to read fasta file sequences
 import time
 from memory_profiler import memory_usage #Use to get the memory usages. /!\ You may need to install memory_profiler.
 import gc #garbage collector. Use to call it only at good moments
 
 '''
+usage: ./estimate_mergeScore_2_seq.py <file.fasta>
 This script is used to test algorithms to give an estimate percent score
 between 2 sequences. 
-It wil compare each pair of a set of sequence (the arguments) so it needs at least 2 sequences
+It wil compare each pair of a set of sequences (given by a fasta file)
 The main goal is to find a suitable algorithm for a GPU
 usage. Therefore, a fairly precise algorithm is required (the reverse
 complement is not an obligation as we can re-calculate it),
@@ -183,11 +185,17 @@ It gets the sequences then run the main function.
 
 # Run the main function
 if __name__ == "__main__":
-	# Get the sequences (expect at least 2)
-	if len(sys.argv) < 2:
-		print("Expect at least 2 arguments : the sequences")
+	# Get the argument (the fasta file)
+	if len(sys.argv) != 2:
+		print("Expect only one argument : the fasta file of sequences")
 		sys.exit()
 
+	#Read fasta file
+	seqs = []
+	for record in  SeqIO.parse(open(sys.argv[1]), 'fasta'):
+		seqs.append(record.seq)
+
+
 	# Run the main function
-	main(sys.argv[1:])
+	main(seqs)
 
