@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+import sys #Arguements gathering
+
 
 '''
 This script is used to test algorithms to give an estimate percent score
@@ -16,15 +18,17 @@ reads are merged, example :
  -score: high percent
 '''
 
+def main(seq1, seq2):
+	#output sequences
+	print("Seq1: "+seq1)
+	print("Seq2: "+seq2)
 
-# Get the sequences
-seq1 = "AATGGGCATCGAGGATA"
-seq2 = "CGCGATGCATCGAGGC"
-len1 = len(seq1)
-len2 = len(seq2)
+	#Run first algorithm (dot_cut)
+	print("\ndot_cut:")
+	dot_cut(seq1, seq2)
 
 '''
-Algorithm 1: The 'dotplot'.
+Algorithm 1: The 'dot_cut'.
 The principe is to increase the score when the merge is contiguous (diagonal
 comparaison) but an difference make a score=0 :
 	IF seq1[i] == seq2[j]: score_actual[j] = score_previous[j-1]+1
@@ -40,73 +44,90 @@ When a part of seq2 has been 'scored', only check the remaining (on the right)
 of seq2 to avoid to count a same parts multiple times and to do "come-backs".
 '''
 
-# print seq 2
-o = "seqs"
-for j in range(len2):
-	o += "\t" + seq2[j]
-o += "\t||\tBEST"
-print(o)
+def dot_cut(seq1, seq2):
+	#Get sequences length
+	len1 = len(seq1)
+	len2 = len(seq2)
 
-# Init the scores arrays
-previous = [0]*len2
-actual = [0]*len2
-previous_best = 0
-best_scores =  list()
-begin_len2 = 0 #From which nuc of len2 the cmp start
+	# print seq 2
+	o = "seqs"
+	for j in range(len2):
+		o += "\t" + seq2[j]
+	o += "\t||\tBEST"
+	print(o)
 
-# Do cmp
-for i in range(len1):
-	o = seq1[i]
+	# Init the scores arrays
+	previous = [0]*len2
+	actual = [0]*len2
+	previous_best = 0
+	best_scores =  list()
+	begin_len2 = 0 #From which nuc of len2 the cmp start
 
-	#Cmp seq2 to actual nuc of seq1
-	for j in range(begin_len2):
-		o += "\t "
-	for j in range(begin_len2, len2):
-		if seq1[i] == seq2[j]:
-			if j>0: actual[j] = previous[j-1]+1
-			else: actual[j] = 1
-		else: actual[j]=0
-		o += "\t"+str(actual[j])
+	# Do cmp
+	for i in range(len1):
+		o = seq1[i]
 
-	# Get the best. Do we have a drop ?
-	best = max(actual)
+		#Cmp seq2 to actual nuc of seq1
+		for j in range(begin_len2):
+			o += "\t "
+		for j in range(begin_len2, len2):
+			if seq1[i] == seq2[j]:
+				if j>0: actual[j] = previous[j-1]+1
+				else: actual[j] = 1
+			else: actual[j]=0
+			o += "\t"+str(actual[j])
 
-	o += "\t||\t"+str(best)
+		# Get the best. Do we have a drop ?
+		best = max(actual)
 
-	if best < previous_best:
-		#Best found ! (the previous_best ;) )
-		best_scores.append(previous_best)
+		o += "\t||\t"+str(best)
 
-		#Now, start on the next len2 nuc from the last nuc of the
-		#previous_best for further check
-		begin_len2 = previous.index(previous_best)+1
+		if best < previous_best:
+			#Best found ! (the previous_best ;) )
+			best_scores.append(previous_best)
 
-		#Clear the buffers
-		best = 0
+			#Now, start on the next len2 nuc from the last nuc of the
+			#previous_best for further check
+			begin_len2 = previous.index(previous_best)+1
+
+			#Clear the buffers
+			best = 0
+			actual = [0]*len2
+
+		
+		previous_best = best
+		
+		print(o)
+		
+		#Move the scores buffers
+		previous = actual
 		actual = [0]*len2
 
-	
-	previous_best = best
-	
-	print(o)
-	
-	#Move the scores buffers
-	previous = actual
-	actual = [0]*len2
+	# Add the last best score
+	best_scores.append(previous_best)
+		
+	# Results
+	score = sum(best_scores)
+	score_theomax = min(len1,len2)
+	score_percent = 100*score/score_theomax
+	print("\nResults:")
+	print("\tSeq 1: "+seq1)
+	print("\tSeq 2: "+seq2)
+	print("\tBest scores: "+str(best_scores))
+	print("\tCmp score:\t"+str(score))
+	print("\tTheoric max:\t"+str(score_theomax))
+	print("\tPercent score:\t"+str(score_percent) + " %")
 
-# Add the last best score
-best_scores.append(previous_best)
-	
-# Results
-score = sum(best_scores)
-score_theomax = min(len1,len2)
-score_percent = 100*score/score_theomax
-print("\nResults:")
-print("\tSeq 1: "+seq1)
-print("\tSeq 2: "+seq2)
-print("\tBest scores: "+str(best_scores))
-print("\tCmp score:\t"+str(score))
-print("\tTheoric max:\t"+str(score_theomax))
-print("\tPercent score:\t"+str(score_percent) + " %")
 
+
+
+# Run the main function
+if __name__ == "__main__":
+	# Get the sequences
+	if len(sys.argv) != 3:
+		print("Expect strictly 2 arguments : the 2 sequences")
+		sys.exit()
+
+	# Run the main function
+	main(str(sys.argv[1]), str(sys.argv[2]))
 
