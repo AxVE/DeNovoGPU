@@ -17,7 +17,8 @@ Une liste non-exhaustive :
 ###### Scripts
 Scripts | python3 | biopython | memory\_profiler | matplotlib
 :---|:---:|:---:|:--:|:---:
-**estimate_mergeScore_2_seq.py**|X|X|X|
+**estimate\_mergeScore\_2\_seq.py**|X|X|X|
+**csv\_mergeScore\_2\_seq\_heatmap.py**|X| | |X
 
 ## Principe simplifié
 Le principe de base est simpliste :
