@@ -19,12 +19,19 @@ reads are merged, example :
 '''
 
 def main(seq1, seq2):
+	# Correct sequences cases
+	seq1 = seq1.upper()
+	seq2 = seq2.upper()
 	#output sequences
 	print("Seq1: "+seq1)
 	print("Seq2: "+seq2)
+	print("\n==== Algorithms run ====\n")
 
-	#Run first algorithm (dot_cut)
-	print("\ndot_cut: "+str(dot_cut(seq1,seq2))+" %")
+	#Run algorithms
+		#needleman
+	print("needle: "+str(needle(seq1,seq2))+" %")
+		#dot_cut
+	print("dot_cut: "+str(dot_cut(seq1,seq2))+" %")
 
 '''
 Algorithm 'Smith-watermann'
@@ -42,7 +49,35 @@ def needle(seq1, seq2):
 	len2 = len(seq2)
 
 	# Prepare scoring matrix[len1][len2]
-	matrix = [[0]*len2]*len1
+	matrix = [[0 for j in range(len2)] for i in range(len1)]
+
+	# Fill first column: first nuc of seq2 against all seq1 => gap is allowed, only match/mismatch of score 1/-1
+	for i in range(len1): matrix[i][0] = 1 if seq1[i]==seq2[0] else -1
+
+	# Fill first line: it is a gap so the -1 increase
+	for j in range(1,len2): matrix[0][j] = -j
+
+	#Fill the remaining of the matrix
+	for i in range(1,len1):
+		for j in range(1,len2):
+			# Match / mismatch ?
+			match = matrix[i-1][j-1] + (1 if seq1[i]==seq2[j] else -1)
+
+			# indel ?
+			i1 = matrix[i-1][j]-1
+			i2 = matrix[i][j-1]-1
+
+			# keep best
+			matrix[i][j] = max(match, i1, i2)
+			
+	# Get the list of best concurrents
+	best_co = matrix[len1-1][:]
+	for i in range(len1):
+		best_co.append(matrix[i][-1])
+
+	# Get score
+	return 100*max(best_co)/min(len1,len2)
+			
 
 
 '''
