@@ -35,7 +35,7 @@ def main(seqs):
 	#Run algorithms on each couple
 	gc.disable() # Disable automatic garbage collector
 	#print("\n==== Algorithms run ====")
-	print("algo\tseqID1\tseqID2\tscore\tmem\ttime")
+	print("algo\tseqID1\tseqID2\tscore (%)\tmem (MB)\ttime (s)")
 
 	for i in range(nbSeqs):
 		for j in range(nbSeqs):
