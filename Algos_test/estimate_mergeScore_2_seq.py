@@ -58,7 +58,7 @@ def analyzeFct(fct, seq1, seq2):
 
 	# Get memory usage during the function exection 
 	gc.collect() #Run garbage collector
-	mem = memory_usage((fct,(seq1,seq2)))
+	mem = memory_usage((fct,(seq1,seq2)),interval=0.1)
 
 	return str(round(score,2))+"\t"+str(round(max(mem),2))+"\t"+str(round(t1-t0,2))
 
