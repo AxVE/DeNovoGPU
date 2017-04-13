@@ -5,7 +5,9 @@ import sys #Arguements gathering
 
 '''
 This script is used to test algorithms to give an estimate percent score
-between 2 sequences. The main goal is to find a suitable algorithm for a GPU
+between 2 sequences. 
+It wil compare each pair of a set of sequence (the arguments) so it needs at least 2 sequences
+The main goal is to find a suitable algorithm for a GPU
 usage. Therefore, a fairly precise algorithm is required (the reverse
 complement is not an obligation as we can re-calculate it),
 using as little memory as possible (the computation time is less important).
@@ -18,20 +20,25 @@ reads are merged, example :
  -score: high percent
 '''
 
-def main(seq1, seq2):
-	# Correct sequences cases
-	seq1 = seq1.upper()
-	seq2 = seq2.upper()
-	#output sequences
-	print("Seq1: "+seq1)
-	print("Seq2: "+seq2)
-	print("\n==== Algorithms run ====\n")
+def main(seqs):
+	# Correct the seqs
+	nbSeqs = len(seqs)
+	#print("\n==== Sequences ====")
+	for s in range(nbSeqs):
+		seqs[s] = seqs[s].upper() #To have only upper cases
+		#print("[-- SEQ "+str(s)+" --]\n"+seqs[s])
+	
+	#Run algorithms on each couple
+	#print("\n==== Algorithms run ====")
+	print("algo\tseqID1\tseqID2\tscore\tmem\ttime")
 
-	#Run algorithms
-		#needleman
-	print("needle: "+str(needle(seq1,seq2))+" %")
-		#dot_cut
-	print("dot_cut: "+str(dot_cut(seq1,seq2))+" %")
+	for i in range(nbSeqs):
+		for j in range(nbSeqs):
+			coupleDescript = "\t"+str(i)+"\t"+str(j)+"\t"
+			#needleman based
+			print("needle"+coupleDescript+str(needle(seqs[i],seqs[j]))+"\t???\t???")
+			#dot_cut
+			print("dot_cut"+coupleDescript+str(dot_cut(seqs[i],seqs[j]))+"\t???\t???")
 
 '''
 Algorithm 'Smith-watermann'
@@ -154,11 +161,11 @@ It gets the sequences then run the main function.
 
 # Run the main function
 if __name__ == "__main__":
-	# Get the sequences
-	if len(sys.argv) != 3:
-		print("Expect strictly 2 arguments : the 2 sequences")
+	# Get the sequences (expect at least 2)
+	if len(sys.argv) < 2:
+		print("Expect at least 2 arguments : the sequences")
 		sys.exit()
 
 	# Run the main function
-	main(str(sys.argv[1]), str(sys.argv[2]))
+	main(sys.argv[1:])
 
