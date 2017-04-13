@@ -27,6 +27,25 @@ def main(seq1, seq2):
 	print("\ndot_cut: "+str(dot_cut(seq1,seq2))+" %")
 
 '''
+Algorithm 'Smith-watermann'
+Based on an needleman principe: each case is the best of
+ - score[i-1][j-1] + (seq1[i]==seq2[j]?1:-1) #Match / mismatch
+ - score[i-1][j]-1 #Indel
+ - score[i][j-1] #Indel
+The first nuc of seq2 is either a match of score 1 or a mismatch of score -1: the gap before this on the seq1 doesn't count.
+After the end seq1, indels on seq2 doesn't count.
+The best score is the best of the last score line and the last column
+'''
+def needle(seq1, seq2):
+	# Get sequences length
+	len1 = len(seq1)
+	len2 = len(seq2)
+
+	# Prepare scoring matrix[len1][len2]
+	matrix = [[0]*len2]*len1
+
+
+'''
 Algorithm 'dot_cut'.
 The principe is to increase the score when the merge is contiguous (diagonal
 comparaison) but an difference make a score=0 :
@@ -92,6 +111,11 @@ def dot_cut(seq1, seq2):
 	# Results
 	return 100*sum(best_scores)/min(len1,len2)
 
+
+'''
+Python will run the following part at start.
+It gets the sequences then run the main function.
+'''
 
 # Run the main function
 if __name__ == "__main__":
