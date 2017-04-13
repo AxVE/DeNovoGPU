@@ -2,7 +2,8 @@
 
 import sys #Arguments gathering, exit script, ...
 import time
-
+from memory_profiler import memory_usage #Use to get the memory usages. /!\ You may need to install memory_profiler.
+import gc #garbage collector. Use to call it only at good moments
 
 '''
 This script is used to test algorithms to give an estimate percent score
@@ -30,6 +31,7 @@ def main(seqs):
 		#print("[-- SEQ "+str(s)+" --]\n"+seqs[s])
 	
 	#Run algorithms on each couple
+	gc.disable() # Disable automatic garbage collector
 	#print("\n==== Algorithms run ====")
 	print("algo\tseqID1\tseqID2\tscore\tmem\ttime")
 
@@ -49,11 +51,16 @@ input: function, seq1, seq2
 output: string "score(%)\tmem(?)\ttime(s)"
 '''
 def analyzeFct(fct, seq1, seq2):
+	# Execute and get delta time
 	t0 = time.time()
 	score = fct(seq1, seq2)
 	t1 = time.time()
 
-	return str(round(score,2))+"\t???\t"+str(round(t1-t0,2))
+	# Get memory usage during the function exection 
+	gc.collect() #Run garbage collector
+	mem = memory_usage((fct,(seq1,seq2)))
+
+	return str(round(score,2))+"\t"+str(round(max(mem),2))+"\t"+str(round(t1-t0,2))
 
 '''
 Algorithm 'Smith-watermann'
