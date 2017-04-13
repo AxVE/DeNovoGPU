@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
-import sys #Arguements gathering
+import sys #Arguments gathering, exit script, ...
+import time
 
 
 '''
@@ -36,9 +37,23 @@ def main(seqs):
 		for j in range(nbSeqs):
 			coupleDescript = "\t"+str(i)+"\t"+str(j)+"\t"
 			#needleman based
-			print("needle"+coupleDescript+str(needle(seqs[i],seqs[j]))+"\t???\t???")
+			print("needle"+coupleDescript+analyzeFct(needle,seqs[i],seqs[j]))
+
 			#dot_cut
-			print("dot_cut"+coupleDescript+str(dot_cut(seqs[i],seqs[j]))+"\t???\t???")
+			print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
+
+'''
+Tool function to run an cmp function and get (and output) its informations
+as time, value, etc...
+input: function, seq1, seq2
+output: string "score(%)\tmem(?)\ttime(s)"
+'''
+def analyzeFct(fct, seq1, seq2):
+	t0 = time.time()
+	score = fct(seq1, seq2)
+	t1 = time.time()
+
+	return str(round(score,2))+"\t???\t"+str(round(t1-t0,2))
 
 '''
 Algorithm 'Smith-watermann'
