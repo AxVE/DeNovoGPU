@@ -8,10 +8,7 @@ OBJDIR = Obj
 BINDIR = Bin
 INCDIR = Includes
 
-#Files name(don't input main)
-files = log reads
-
-
+# Build commands
 
 all: $(SRCDIR)/main.cpp $(OBJDIR)/workerCL.o $(OBJDIR)/log.o $(OBJDIR)/readsTools.o $(OBJDIR)/reads.o
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o Bin/denovoGPU
