@@ -10,15 +10,14 @@ Une liste non-exhaustive :
 - Ray
 
 ## Pré-requis
-### Programme principal
+###### Programme principal
 - **g++:** g++ (GCC) 6.3.1 20170109 (support de c++14)
 - **OpenCL:** 2.1
 - **OpenCL C++ wrapper API:** 1.2
-### Scripts
-- **estimate_mergeScore_2_seq.py:**
-	- python3
-	- biopython
-	- memory\_profiler
+###### Scripts
+Scripts | python3 | biopython | memory\_profiler | matplotlib
+--------|---------|-----------|------------------|-----------
+**estimate_mergeScore_2_seq.py**|X|X|X|
 
 ## Principe simplifié
 Le principe de base est simpliste :
