@@ -24,11 +24,10 @@ def main(seq1, seq2):
 	print("Seq2: "+seq2)
 
 	#Run first algorithm (dot_cut)
-	print("\ndot_cut:")
-	dot_cut(seq1, seq2)
+	print("\ndot_cut: "+str(dot_cut(seq1,seq2))+" %")
 
 '''
-Algorithm 1: The 'dot_cut'.
+Algorithm 'dot_cut'.
 The principe is to increase the score when the merge is contiguous (diagonal
 comparaison) but an difference make a score=0 :
 	IF seq1[i] == seq2[j]: score_actual[j] = score_previous[j-1]+1
@@ -49,13 +48,6 @@ def dot_cut(seq1, seq2):
 	len1 = len(seq1)
 	len2 = len(seq2)
 
-	# print seq 2
-	o = "seqs"
-	for j in range(len2):
-		o += "\t" + seq2[j]
-	o += "\t||\tBEST"
-	print(o)
-
 	# Init the scores arrays
 	previous = [0]*len2
 	actual = [0]*len2
@@ -65,22 +57,15 @@ def dot_cut(seq1, seq2):
 
 	# Do cmp
 	for i in range(len1):
-		o = seq1[i]
-
 		#Cmp seq2 to actual nuc of seq1
-		for j in range(begin_len2):
-			o += "\t "
 		for j in range(begin_len2, len2):
 			if seq1[i] == seq2[j]:
 				if j>0: actual[j] = previous[j-1]+1
 				else: actual[j] = 1
 			else: actual[j]=0
-			o += "\t"+str(actual[j])
 
 		# Get the best. Do we have a drop ?
 		best = max(actual)
-
-		o += "\t||\t"+str(best)
 
 		if best < previous_best:
 			#Best found ! (the previous_best ;) )
@@ -97,8 +82,6 @@ def dot_cut(seq1, seq2):
 		
 		previous_best = best
 		
-		print(o)
-		
 		#Move the scores buffers
 		previous = actual
 		actual = [0]*len2
@@ -107,18 +90,7 @@ def dot_cut(seq1, seq2):
 	best_scores.append(previous_best)
 		
 	# Results
-	score = sum(best_scores)
-	score_theomax = min(len1,len2)
-	score_percent = 100*score/score_theomax
-	print("\nResults:")
-	print("\tSeq 1: "+seq1)
-	print("\tSeq 2: "+seq2)
-	print("\tBest scores: "+str(best_scores))
-	print("\tCmp score:\t"+str(score))
-	print("\tTheoric max:\t"+str(score_theomax))
-	print("\tPercent score:\t"+str(score_percent) + " %")
-
-
+	return 100*sum(best_scores)/min(len1,len2)
 
 
 # Run the main function
