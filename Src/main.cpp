@@ -17,6 +17,10 @@
 
 using namespace std;
 
+/*
+Function to get the scores matrix between all contigs of a same set. Used in mono and multithreading.
+*/
+
 void contigs_cmp(size_t id_begin, size_t id_end, vector< vector< int8_t> >& scores, const Contigs& contigs){
 	ReadsTools readsTools; //Toolsbox containing the function to cmp reads
 	for(size_t c = 0; c < contigs.get_nbContigs(); c++){
@@ -33,6 +37,11 @@ void contigs_cmp(size_t id_begin, size_t id_end, vector< vector< int8_t> >& scor
 		}
 	}
 }
+
+
+/*
+Heart of the program
+*/
 
 int main(int argc, char* argv[]){
 	/* Initialisation :
@@ -122,11 +131,11 @@ int main(int argc, char* argv[]){
 			vector<thread> workers;
 			size_t id_begin=0;
 
-			//the main is a thread with id 0; So the number of worker = (number_of_threads_asked - 1)
+			//the main is a thread; So the number of worker = (number_of_threads_asked - 1).
 			//Launch threads
-			for(size_t w=1; w < params.nbthreads; w++){
+			for(size_t w=0; w < params.nbthreads-1; w++){
 				//Number of contigs to cmp in this thread
-				size_t nb_contigs_cmp = nbContigs/params.nbthreads + (( w-1 < (nbContigs % params.nbthreads) )?1:0);
+				size_t nb_contigs_cmp = nbContigs/params.nbthreads + (( w < (nbContigs % params.nbthreads) )?1:0);
 				//cout << "Thread " << w << ": " << nb_contigs_cmp << " contigs." << endl;
 
 				//If there is contigs to cmp, we run the thread
