@@ -16,7 +16,7 @@ Une liste non-exhaustive :
 - **OpenCL C++ wrapper API:** 1.2
 ###### Scripts
 Scripts | python3 | biopython | memory\_profiler | matplotlib
---------|---------|-----------|------------------|-----------
+:---|:---:|:---:|:--:|:---:
 **estimate_mergeScore_2_seq.py**|X|X|X|
 
 ## Principe simplifié
