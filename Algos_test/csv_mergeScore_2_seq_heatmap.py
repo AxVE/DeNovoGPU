@@ -1,11 +1,12 @@
 #! /usr/bin/python3
 
 import matplotlib.pyplot as plt
+import numpy as np
 import csv
 
 def main(csvpath):
 	#Prepare storage 
-	# map [algo_name] -> array2D [seqID1][seqID2] -> map[score,mem,time]
+	# map [algo_name] -> array2D [seqID1][seqID2] -> list[score,mem,time]
 	values = {}
 	score_limits = [0.0,100]
 	mem_limits = [102400.0,0.0]
@@ -47,6 +48,42 @@ def main(csvpath):
 	print("\tmem: "+str(mem_limits))
 	print("\ttimes: "+str(time_limits))
 
+	# Prepare figure
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+	ax.set_title("Heatmap test")
+
+	# Prepare data
+	seqslabels = list(range(len(values[algo])))
+	nbSeqs = len(seqslabels)
+	data_score = np.empty([nbSeqs, nbSeqs])  #Init the data array
+	
+	# Example with "needle" algorithm
+	algo = "needle"
+		# Fill the data array
+	for i in range(nbSeqs):
+		for j in range(nbSeqs):
+			data_score[i][j] = values[algo][i][j][0] # 0 is the id of score
+
+	heatmap = ax.pcolor(data_score, cmap=plt.cm.Blues)
+
+	# put the major ticks at the middle of each cell
+	ax.set_xticks(np.arange(data_score.shape[0])+0.5, minor=False)
+	ax.set_yticks(np.arange(data_score.shape[1])+0.5, minor=False)
+
+	# want a more natural, table-like display
+	#ax.invert_yaxis()
+	#ax.xaxis.tick_top()
+
+	ax.set_xticklabels(seqslabels, minor=False)
+	ax.set_yticklabels(seqslabels, minor=False)
+
+	# show plot
+	plt.show()
+
+
+	
+###################################
 
 if __name__ == "__main__":
 	main("reads_test2.csv")
