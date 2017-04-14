@@ -54,7 +54,13 @@ def main(csvpath):
 	nbSeqs = len(seqslabels)
 	data = np.empty([nbSeqs, nbSeqs])  #Init the data array
 	fig = plt.figure() # prepare figure
-	subplots = ["score","mem","time"]
+	subplots = ["scores (%)","mem (MB)","time (s)"]
+		#Use same limits to normalize heatmaps
+	limits=[
+		score_limits,
+		mem_limits,
+		time_limits
+	]
 
 	# For each algorithm plot the score, mem and timeA
 	algo_list = list(values.keys())
@@ -74,7 +80,7 @@ def main(csvpath):
 					data[i][j] = values[algo][i][j][e] # 0 is the id of score
 			
 			# Create the heatmap
-			heatmap = ax.pcolor(data, cmap=plt.cm.Blues)
+			heatmap = ax.pcolor(data, cmap=plt.cm.Blues, vmin=limits[e][0], vmax=limits[e][1])
 
 			# put the major ticks at the middle of each cell
 			ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
@@ -86,6 +92,7 @@ def main(csvpath):
 
 			ax.set_xticklabels(seqslabels, minor=False)
 			ax.set_yticklabels(seqslabels, minor=False)
+			fig.colorbar(heatmap)
 
 	# show plot
 	plt.show()
