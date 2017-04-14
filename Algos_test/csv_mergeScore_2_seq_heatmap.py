@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
@@ -47,36 +48,44 @@ def main(csvpath):
 	print("\tscores: "+str(score_limits))
 	print("\tmem: "+str(mem_limits))
 	print("\ttimes: "+str(time_limits))
-
-	# Prepare figure
-	fig = plt.figure()
-	ax = fig.add_subplot(111)
-	ax.set_title("Heatmap test")
-
+	
 	# Prepare data
 	seqslabels = list(range(len(values[algo])))
 	nbSeqs = len(seqslabels)
-	data_score = np.empty([nbSeqs, nbSeqs])  #Init the data array
-	
-	# Example with "needle" algorithm
-	algo = "needle"
-		# Fill the data array
-	for i in range(nbSeqs):
-		for j in range(nbSeqs):
-			data_score[i][j] = values[algo][i][j][0] # 0 is the id of score
+	data = np.empty([nbSeqs, nbSeqs])  #Init the data array
+	fig = plt.figure() # prepare figure
+	subplots = ["score","mem","time"]
 
-	heatmap = ax.pcolor(data_score, cmap=plt.cm.Blues)
+	# For each algorithm plot the score, mem and timeA
+	algo_list = list(values.keys())
+	nbAlgos = len(algo_list)
+	s = 0 #subplot id, must be 1 but it will directly be incremented
+	for algo in algo_list:
+		# For the score=0, mem=1 and time=2
+		for e in range(3):	
+			s += 1 #Increment subplot id
+			# Prepare subplot
+			ax = fig.add_subplot(nbAlgos,3,s) # plot on same line
+			ax.set_title("Heatmap of "+subplots[e]+" using "+algo)
 
-	# put the major ticks at the middle of each cell
-	ax.set_xticks(np.arange(data_score.shape[0])+0.5, minor=False)
-	ax.set_yticks(np.arange(data_score.shape[1])+0.5, minor=False)
+			# Fill the data array
+			for i in range(nbSeqs):
+				for j in range(nbSeqs):
+					data[i][j] = values[algo][i][j][e] # 0 is the id of score
+			
+			# Create the heatmap
+			heatmap = ax.pcolor(data, cmap=plt.cm.Blues)
 
-	# want a more natural, table-like display
-	#ax.invert_yaxis()
-	#ax.xaxis.tick_top()
+			# put the major ticks at the middle of each cell
+			ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
+			ax.set_yticks(np.arange(data.shape[1])+0.5, minor=False)
 
-	ax.set_xticklabels(seqslabels, minor=False)
-	ax.set_yticklabels(seqslabels, minor=False)
+			# want a more natural, table-like display
+			#ax.invert_yaxis()
+			#ax.xaxis.tick_top()
+
+			ax.set_xticklabels(seqslabels, minor=False)
+			ax.set_yticklabels(seqslabels, minor=False)
 
 	# show plot
 	plt.show()
@@ -86,6 +95,11 @@ def main(csvpath):
 ###################################
 
 if __name__ == "__main__":
-	main("reads_test2.csv")
+	if len(sys.argv) != 2:
+		print("Expect stricly 1 argument : the csv file")
+		sys.exit()
+
+	#run main fct with csv file
+	main(sys.argv[1])
 
 
