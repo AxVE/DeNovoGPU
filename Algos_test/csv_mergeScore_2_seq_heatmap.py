@@ -54,8 +54,8 @@ def main(csvpath):
 	nbSeqs = len(seqslabels)
 	data = np.empty([nbSeqs, nbSeqs])  #Init the data array
 	fig = plt.figure() # prepare figure
+	fig.suptitle("Differents algorithms for similiraty estimation between 2 sequences comparaison using a set of sequences.")
 	subplots_name = ["scores (%)","mem (MB)","time (s)"]
-	#subplots_color = ["winter","Oranges","cool"]
 	subplots_color = ["RdYlGn","Oranges","cool"]
 
 		#Use same limits to normalize heatmaps
@@ -95,9 +95,12 @@ def main(csvpath):
 
 			ax.set_xticklabels(seqslabels, minor=False)
 			ax.set_yticklabels(seqslabels, minor=False)
-			fig.colorbar(heatmap)
+			fig.colorbar(heatmap) #Add the colorbar
+			ax.set_xlabel("sequences id")
+			ax.set_ylabel("sequences id")
 
 	# show plot
+	fig.tight_layout() # Force space between subplots
 	plt.show()
 
 
