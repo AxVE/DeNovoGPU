@@ -65,7 +65,7 @@ def analyzeFct(fct, seq1, seq2):
 	return str(round(score,2))+"\t"+str(round(max(mem),2))+"\t"+str(round(t1-t0,2))
 
 '''
-Algorithm 'Smith-watermann'
+Algorithm 'Needleman&Wunsch'
 Based on an needleman principe: each case is the best of
  - score[i-1][j-1] + (seq1[i]==seq2[j]?1:-1) #Match / mismatch
  - score[i-1][j]-1 #Indel
@@ -89,6 +89,8 @@ def needle(seq1, seq2):
 	for j in range(1,len2): matrix[0][j] = -j
 
 	#Fill the remaining of the matrix
+	#Keep the best possibilities with the end of seq2 (seq2 is inside seq1)
+	bestIN=0
 	for i in range(1,len1):
 		for j in range(1,len2):
 			# Match / mismatch ?
@@ -100,6 +102,9 @@ def needle(seq1, seq2):
 
 			# keep best
 			matrix[i][j] = max(match, i1, i2)
+
+		# Best seq2 inside seq 1 ?
+		if(matrix[i][len2-1] > bestIN){bestIN = matrix[i][len2-1];}
 			
 	# Get the list of best concurrents
 	best_co = matrix[len1-1][:]
@@ -108,6 +113,12 @@ def needle(seq1, seq2):
 
 	# Get score
 	return 100*max(best_co)/min(len1,len2)
+
+''''
+Algorithm 'Needle3Arrays
+Same algorithm but using a score matrix of size (seq1.size(),2)
+as we only need the previous line to calculate the current one.
+'''
 			
 
 
