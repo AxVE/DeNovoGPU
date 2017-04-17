@@ -39,7 +39,8 @@ inline const int8_t bestValueInMatrix(vector< vector< int8_t> > matrix){
 const int8_t ReadsTools::bestScoreMatrix = bestValueInMatrix(scoreMatrix);
 const int ReadsTools::gap_score = -1;
 
-//Tool Public function
+//Tool Public functions
+//Function to get the score between 2 sequences (>0: normal couple, <0: seq2 is reversed-complement)
 const int ReadsTools::scoreCmpReads(const std::string& read1, const string& read2){
 	/* normal mapping */
 	int best = scoreMatchingReads(read1,read2);
@@ -63,7 +64,6 @@ const int ReadsTools::scoreCmpReads(const std::string& read1, const string& read
 				r2r[r2id]='G';
 				break;
 			default:
-				//cerr << "Unknown nuc: " << read2[i] << endl;
 				r2r[r2id]='A';
 				break;
 		}
@@ -75,6 +75,7 @@ const int ReadsTools::scoreCmpReads(const std::string& read1, const string& read
 	return best;
 }
 
+//Function to merge 2 sequences
 const string ReadsTools::allignSeq(const string& seq1, const string& seq2){
 	//Reminder: a needlemap has a size of seq1.size()+1 and seq1.size()+1
 	//because the first line and first column must include an "empty" possibility
@@ -244,6 +245,7 @@ const string ReadsTools::allignSeq(const string& seq1, const string& seq2){
 }
 
 //Tool Private function
+//Function to calculate the score between 2 sequences (no reverse-complement)
 const int ReadsTools::scoreMatchingReads(const string& read1, const string& read2){
 	/*
 	Calculing Comparaison score between the 2 read2s using
