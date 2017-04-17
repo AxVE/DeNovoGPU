@@ -42,6 +42,9 @@ def main(seqs):
 			coupleDescript = "\t"+str(i)+"\t"+str(j)+"\t"
 			#needleman based
 			print("needle"+coupleDescript+analyzeFct(needle,seqs[i],seqs[j]))
+			
+			#needleman 2 arrays based
+			print("need2a"+coupleDescript+analyzeFct(need2arrays,seqs[i],seqs[j]))
 
 			#dot_cut
 			print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
@@ -60,7 +63,7 @@ def analyzeFct(fct, seq1, seq2):
 
 	# Get memory usage during the function exection 
 	gc.collect() #Run garbage collector
-	mem = memory_usage((fct,(seq1,seq2)),interval=0.1)
+	mem = memory_usage(proc=(fct,(seq1,seq2)),interval=0.1)
 
 	return str(round(score,2))+"\t"+str(round(max(mem),2))+"\t"+str(round(t1-t0,2))
 
@@ -116,14 +119,54 @@ def needle(seq1, seq2):
 	# Get score
 	return 100*max(best_co)/min(len1,len2)
 
-''''
-Algorithm 'Needle3Arrays
-Same algorithm but using a score matrix of size (seq1.size(),2)
+'''
+Algorithm 'Need2Arrays
+Same algorithm (needleman&wunsch) but using a score matrix of size (seq1.size(),2)
 as we only need the previous line to calculate the current one.
 '''
+def need2arrays(seq1, seq2):
+	#Get sequences length
+	len1 = len(seq1)
+	len2 = len(seq2)
+
+	# Prepare scoring arrays
+	previous = [0]*len2
+	current = [0]*len2
+
+	# bestIN is the best case of seq2 being INSIDE seq1
+
+	# Calculate the first line (seq2 against seq1[0])
+	# Note: we can't 'allow' a gap in seq2 'first nuc'
+	for j in range(0,len2): previous[j] = -j
+	bestIN = previous[len2-1]
+
+	# Complete the needle
+	for i in range(1, len1):
+		# Test first nuc, a gap is allowed So it's just a (mis)match test
+		current[0] = (1 if seq1[i]==seq2[0] else -1)
+
+		# Finish the line
+		for j in range(1,len2):
+			scores=[0,0,0]
+			# Match/mismatch ?
+			scores[0] = previous[j-1] + (1 if seq1[i]==seq2[j] else -1)
+			#Indels ?
+			scores[1] = previous[j]-1
+			scores[2] = current[j-1]-1
+			#keep best
+			current[j]=max(scores)
+		
+		# Best seq2 inside possibility ?
+		if(current[j] > bestIN): bestIN=current[j]
+
+		# move buffers
+		previous = current
+		current = [0]*len2
 	
-
-
+	# Get the best possibilities score which is inside the last line + the bestIN (pseudo last column)
+	previous.append(bestIN) #Previous is last because we moved buffers. We add bestIN to it
+	return 100*max(previous)/min(len1,len2) #Percent and normalize by theorical max best score (full match)
+		
 '''
 Algorithm 'dot_cut'.
 The principe is to increase the score when the merge is contiguous (diagonal
