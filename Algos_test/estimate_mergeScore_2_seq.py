@@ -137,7 +137,8 @@ def need2arrays(seq1, seq2):
 
 	# Calculate the first line (seq2 against seq1[0])
 	# Note: we can't 'allow' a gap in seq2 'first nuc'
-	for j in range(0,len2): previous[j] = -j
+	previous[0] = (1 if seq1[0]==seq2[0] else -1)
+	for j in range(1,len2): previous[j] = -j
 	bestIN = previous[len2-1]
 
 	# Complete the needle
