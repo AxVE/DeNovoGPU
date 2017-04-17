@@ -104,12 +104,14 @@ def needle(seq1, seq2):
 			matrix[i][j] = max(match, i1, i2)
 
 		# Best seq2 inside seq 1 ?
-		if(matrix[i][len2-1] > bestIN){bestIN = matrix[i][len2-1];}
+		if(matrix[i][len2-1] > bestIN): bestIN = matrix[i][len2-1]
 			
 	# Get the list of best concurrents
 	best_co = matrix[len1-1][:]
 	for i in range(len1):
 		best_co.append(matrix[i][-1])
+	#Add the se2 is in seq1 possibility
+	best_co.append(bestIN)
 
 	# Get score
 	return 100*max(best_co)/min(len1,len2)
@@ -119,7 +121,7 @@ Algorithm 'Needle3Arrays
 Same algorithm but using a score matrix of size (seq1.size(),2)
 as we only need the previous line to calculate the current one.
 '''
-			
+	
 
 
 '''
