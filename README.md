@@ -40,6 +40,7 @@ Un exemple d'utilisation :
 ## Liste de tâches
 - [x] Test en multithreading
 - [ ] Implémentation OpenCL et test
+- [ ] stocker la somme de la taille des contigs dans la classe Contigs et la recalculer à chaque fusion ( tailleTot -= c1.size()+c2.size()-c\_merge.size() ) afin d'éviter de la recalculer à chaque envoi au gpu.
 - [ ] Nettoyage du code et commentaires
 - [ ] Output des contigs finaux
 - [ ] Ne plus stocker en RAM les reads (pas les contigs) car ils ne sont utilisés que 2 fois : à l'initialisation des contigs et au peaufinage de ceux-ci à la fin.
