@@ -1,7 +1,13 @@
-Computer	Threads	Time	Memory (KB)
-hookfang	1	12:47.02	19620
-hookfang	2	7:03.68	35232
-hookfang	3	5:09.76	50216
-hookfang	4	4:18.06	68760
-hookfang	5	3:42.83	74472
-hookfang	6	3:25.19	81852	
+Computer	Threads	Time	Memory (KB)	Date (jj/mm/aaaa)
+hookfang	1	12:47.02	19620	15/03/2017
+hookfang	2	7:03.68	35232	15/03/2017
+hookfang	3	5:09.76	50216	15/03/2017
+hookfang	4	4:18.06	68760	15/03/2017
+hookfang	5	3:42.83	74472	15/03/2017
+hookfang	6	3:25.19	81852	15/03/2017
+hookfang	1	0:33.24	3764	20/04/2017
+hookfang	2	0:17.92	3832	20/04/2017
+hookfang	3	0:12.36	3884	20/04/2017
+hookfang	4	0:10.05	3852	20/04/2017
+hookfang	5	0:09.16	3936	20/04/2017
+hookfang	6	0:08.36	3960	20/04/2017
