@@ -27,6 +27,10 @@ const std::map<unsigned char, char> decode_nuc = {
 	{BASE_C, 'C'}
 };
 
+/*
+The class seq is used to store a sequence object : the name and nucleotide sequence.
+The nucleotide sequence is compressed.
+*/
 class Seq {
 	public:
 		//Constructor
@@ -57,7 +61,10 @@ class Seq {
 		unsigned char * m_encNuc=nullptr; //The encoded nucleotides sequence
 		seqLength m_size;
 };
-	
+
+/*
+The Reads class is a storage (and file reader) of multiple Sequence objects.
+*/
 class Reads {
 	public:
 		//Setters
@@ -80,6 +87,10 @@ class Reads {
 
 };
 
+/*
+The Contigs class store all contigs.
+For each contig it know the sequence, its size, and the related reads sequence.
+*/
 class Contigs {
 	public:
 		//Constructor need to have the set of all reads
