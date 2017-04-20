@@ -246,6 +246,9 @@ const string ReadsTools::allignSeq(const string& seq1, const string& seq2){
 
 //Tool Private function
 //Function to calculate the score between 2 sequences (no reverse-complement)
+//It's based on needleman&wunsch using only 2 1D array of size of seq1 (and not
+//a 2D array of size seq1*seq2. The 2 1D arrays are the compairason againt the actual
+//seq1 nuc (seq1[n] <-> seq2) and the previous comparaison (seq1[n-1] <-> seq2)
 const int ReadsTools::scoreMatchingReads(const string& read1, const string& read2){
 	/*
 	Calculing Comparaison score between the 2 read2s using
@@ -253,86 +256,55 @@ const int ReadsTools::scoreMatchingReads(const string& read1, const string& read
 	as we only need the score
 	*/
 
-	//Initialize mapping array
-	vector< vector<int> > needlemap = vector< vector<int> >(read1.size(),
-		vector<int>(read2.size(),0));
-	
-	/*
-	Fill the array (the best score is the best value inside
-	the last column and the last line).
-	*/
-	
-	//Do the first value (row[0][0])
-	needlemap[0][0]=scoreMatrix[nuc.at(read1[0])][nuc.at(read2[0])];
-	//Do all the first line and the first column
-	//It's all a read2 again the first nuc. Vice-versa.
-		//read2 against first nuc of read1
-	for(size_t n=1; n < read2.size(); n++){
-		//Gap or (mis)match, keep the best
-		int s=scoreMatrix[nuc.at(read1[0])][nuc.at(read2[n])];
-		if(needlemap[0][n-1] + gap_score > s){s=needlemap[0][n-1]+gap_score;}
-		needlemap[0][n]=s;
-	}
-		//read1 against first nuc of read2
-	for(size_t n=1; n < read1.size(); n++){
-		//Gap or (mis)match, keep the best
-		int s=scoreMatrix[nuc.at(read1[n])][nuc.at(read2[0])];
-		if(needlemap[n-1][0] + gap_score > s){s=needlemap[n-1][0]+gap_score;}
-		needlemap[n][0]=s;
-	}
+	//Get the sequences length
+	size_t len1 = read1.size();
+	size_t len2 = read2.size();
 
-	//Complete the array : do all other cases (except last column and last line)
-	for(size_t n1=1; n1 < read1.size()-1; n1++){
-		for(size_t n2=1; n2 < read2.size()-1; n2++){
-			//Is it best to include a match or have a (mis)match ?
-			//Get the mismatch score
-			int s = needlemap[n1-1][n2-1]
-				+ scoreMatrix[nuc.at(read1[n1])][nuc.at(read2[n2])];
-			//Include a gap (2 possibilities) is better ?
-			if(needlemap[n1][n2-1]+gap_score > s){s=needlemap[n1][n2-1]+gap_score;}
-			if(needlemap[n1-1][n2]+gap_score > s){s=needlemap[n1-1][n2]+gap_score;}
-			//Keep the best score in the current row
-			needlemap[n1][n2]=s;
+	//Prepare the scoring arrays
+	int* previous = new int[len2];
+	int* current = new int[len2];
+	int bestIN = 0; //bestIN is the best case of seq2 being completly inside seq1
+	
+	//Calculate the first line (seq2 againt seq1[0]
+	//Note: we can't 'allow' a gap in seq2's "first nuc"
+	previous[0] = ((read1[0]==read2[0])?1:-1);
+	for(size_t j=1; j < len2; j++){ previous[j] = -j; }
+	bestIN = previous[len2-1];
+
+	//Complete the needle comparison
+	for(size_t i=1; i < len1; i++){
+		//Test the seq2's first nuc, a gap is allowed so it's just a (mis)match
+		current[0] = ((read1[i]==read2[0])?1:-1);
+		
+		//Finish the line
+		for(size_t j=1; j < len2; j++){
+			//current[j] is the best of a match/mistach and both indels possibilities
+			//Match/mismatch ?
+			current[j] = previous[j-1] + ((read1[i]==read2[j])?1:-1);
+
+			//indels ?
+			current[j] = ((previous[j]-1 > current[j])?previous[j]-1:current[j]);
+			current[j] = ((current[j-1]-1 > current[j])?current[j-1]-1:current[j]);
 		}
+
+		// Best of read2 being inside read1 ?
+		bestIN = ((current[len2-1] > bestIN)?current[len2-1]:bestIN);
+
+		//swap previous and current arrays
+		int* swapbuf = previous;
+		previous = current;
+		current = swapbuf;
 	}
 
-	//Do last line (permissiv to not finish read2) and search best score
-	int best=0;
-	const size_t n1=read1.size()-1;
-	for(size_t n=1; n < read2.size(); n++){
-		//Gap or mismatch ?
-		int s=scoreMatrix[nuc.at(read1[n1])][nuc.at(read2[n])]+needlemap[n1-1][n-1];
-		if(needlemap[n1-1][n]+gap_score > s){s=needlemap[n1][n]+gap_score;}
-		if(needlemap[n1][n-1] > s){s=needlemap[n1][n-1];}
-		needlemap[n1][n]=s;
-		
-		//Best ?
-		if(s>best){best=s;}
-	}
+	//get the best score
+	for(size_t j=0; j<len2;j++){ bestIN = ((previous[j]>bestIN)?previous[j]:bestIN);}
+	if(bestIN < 0){bestIN=0;} //security: we want a score >= 0
+	int theomax = ((len1<len2)?len1:len2);
 
-	//Do last column (permissiv to not finish read1) and search best score
-	const size_t n2 = read2.size()-1;
-	for(size_t n=1; n < read1.size(); n++){
-		//Gap or mismatch ?
-		int s=scoreMatrix[nuc.at(read1[n])][nuc.at(read2[n2])]+needlemap[n-1][n2-1];
-		if(needlemap[n][n2-1]+gap_score > s){s=needlemap[n][n2-1]+gap_score;}
-		if(needlemap[n-1][n2] > s){s=needlemap[n-1][n2];}
-		needlemap[n][n2]=s;
-		
-		//Best ?
-		if(s>best){best=s;}
-	}
+	//Clean memory
+	delete[] previous;
+	delete[] current;
 
-	//Do last row
-	int s=scoreMatrix[nuc.at(read1[read1.size()-1])][nuc.at(read2[read2.size()-1])];
-		//best gap ?
-	if(needlemap[read1.size()-1][read2.size()-2] > s){needlemap[read1.size()-1][read2.size()-2];}
-	if(needlemap[read1.size()-2][read2.size()-1] > s){needlemap[read1.size()-2][read2.size()-1];}
-		//best score ?
-	if(s>best){best=s;}
-
-	//Calculate the maximum possible best score
-	int maxbest = min(read1.size(),read2.size())*bestScoreMatrix;
-	//output the best
-	return 100*best/maxbest;
+	//Return best score (percent of bestIn based on theoric max (shorter reads size))
+	return 100*bestIN/theomax;
 }
