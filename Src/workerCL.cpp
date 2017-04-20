@@ -97,13 +97,16 @@ void WorkerCL::run(Contigs contigs){
 		//buffer only accepts non-dynamics arrays (even of size 1)
 	uint64_t infos[1] = {ultraSequenceSize};
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
-	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), infos);
+	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), &infos);
+		//sequences sizes (array of 64bits) buffer
+	cl::Buffer buf_sizes (m_context, CL_ME_READ_ONLY, sizeof(uint64_t)*nbContigs);
+	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
 
 	//Update the kernel (gpu function)
 	m_kernel.setArg(0, buf_infos);
 
 	//Run the kernel and wait the end
-	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NullRange, cl::NullRange, NULL, &ev);
+	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
 	ev.wait();
 	
 
