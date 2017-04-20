@@ -90,6 +90,16 @@ class Reads {
 /*
 The Contigs class store all contigs.
 For each contig it know the sequence, its size, and the related reads sequence.
+
+To have a gain of speed (and ram usage), the vector of pointers to contigs is reduced  only when asked ( sync_contigs_list() ). So you can do all successive contigs merging
+THEN call sync_contigs_list().
+The good way is:
+	1/ calculate all scores between contigs
+	2/ merge contigs following these scores
+	IF at least one merge has been done:
+		3/ call sync_contigs_list()
+		4/ Go to 1/
+	5/ job is done
 */
 class Contigs {
 	public:
