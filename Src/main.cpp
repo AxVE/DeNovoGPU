@@ -66,11 +66,12 @@ int main(int argc, char* argv[]){
 		return 0; //End prog
 	}
 
-	//Initialize gpu
+	//Initialize gpu (used only if gpu is asked)
+	WorkerCL* workerCL = nullptr;
 	try{
 		if(params.gpu){
 			log.write("=== OpenCL initialisation ===");
-			WorkerCL workerCL(params.opencl_platform_id, params.opencl_device_id);
+			workerCL = new WorkerCL(params.opencl_platform_id, params.opencl_device_id);
 		}
 	}
 	catch(string opencl_err){
@@ -125,9 +126,13 @@ int main(int argc, char* argv[]){
 		*/
 		nbContigs = contigs.get_nbContigs();
 		vector< vector< int8_t > > scores = vector< vector<int8_t> >(nbContigs, vector<int8_t>(nbContigs, 0));
-
-			//For each read against each read
-		if(params.nbthreads > 1){ //using multithreading (threads will be destroyed at the end)
+		
+			// GPU ?
+		if(params.gpu){
+			workerCL->run(contigs);
+		}
+			// Multithreading ?
+		else if(params.nbthreads > 1){
 			vector<thread> workers;
 			size_t id_begin=0;
 
@@ -160,7 +165,8 @@ int main(int argc, char* argv[]){
 			}
 
 		}
-		else{ //no multithreading
+			// Monothreading
+		else{
 			contigs_cmp(0, nbContigs-1, scores, contigs);
 		}
 
@@ -259,6 +265,13 @@ int main(int argc, char* argv[]){
 		log.write("===== Cycle end =====\n");
 	}
 
+	//Free workerCL (if created)
+	if(params.gpu){
+		cout << "Deleting gpu worker" << endl;
+		delete workerCL;
+		workerCL = nullptr;
+		cout << "\t- Done" << endl;
+	}
 
 	//End of program
 	return 0;
