@@ -59,7 +59,7 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 WorkerCL::~WorkerCL(){
 }
 
-void WorkerCL::run(Contigs contigs){
+void WorkerCL::run(const Contigs& contigs){
 	/*
 	Create the string containing all contigs sequences
 	and store the list of contigs size (in same orders)
@@ -108,11 +108,10 @@ void WorkerCL::run(Contigs contigs){
 	//Run the kernel and wait the end
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
 	ev.wait();
-	
 
 	//Clean the memory
 	delete ultraSequence;
-
+	ultraSequence = nullptr;
 }
 
 void WorkerCL::list_infos(Log& output){

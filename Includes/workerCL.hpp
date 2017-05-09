@@ -14,7 +14,7 @@ class WorkerCL {
 		~WorkerCL();
 
 		//Return the matrix of coupling scores of a contigs set
-		void run(Contigs contigs);
+		void run(const Contigs& contigs);
 		
 		static void list_infos(Log& output);
 
