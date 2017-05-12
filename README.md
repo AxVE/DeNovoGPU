@@ -8,6 +8,7 @@ Une liste non-exhaustive :
 - SOAP
 - Abyss
 - Ray
+Attention ! Le programme est actuellement en développement et ne fournit pas de résultat.
 
 ## Pré-requis
 ###### Programme principal
@@ -27,6 +28,7 @@ Le principe de base est simpliste :
 3. On fusionne les contigs avec un score supèrieur à une valeur minimale en faisant attention au "cross-fusion"
 (2 paires fusionnables ayant un même contig).
 4. Si au moins 2 contigs ont pu être fusionnés, on retourne à l'étape 2.
+Un graphique représentant ce principe est disponible dans le dossier Docs.
 
 ## Mesures
 Les mesures rapides de temps et d'empreinte mémoire (CPU et RAM) sont réalisées avec l'outil time (version GNU time 1.7).
