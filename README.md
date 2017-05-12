@@ -31,7 +31,7 @@ Le principe de base est simpliste :
 4. Si au moins 2 contigs ont pu être fusionnés, on retourne à l'étape 2.
 
 Un graphique représentant ce principe est disponible dans le dossier Docs.
-![alt text](https://github.com/AxVE/DeNovoGPU/blob/master/Docs/denovogpu_workflow.svg "Workflow interne du programme")
+![Image du fonctionnement interne](https://raw.githubusercontent.com/AxVE/DeNovoGPU/master/Docs/denovogpu_workflow.svg "Workflow interne du programme")
 
 ## Mesures
 Les mesures rapides de temps et d'empreinte mémoire (CPU et RAM) sont réalisées avec l'outil time (version GNU time 1.7).
