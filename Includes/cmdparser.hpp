@@ -141,7 +141,7 @@ Params parse(int argc, char* argv[]){
 
 	//Set the params
 		//Input read files
-	if(!options[READSFILE]){ //Test the file is set
+	if(!options[READSFILE] && !options[GPUINFOS]){ //Test the file is set. It must be set(except if infos is called).
 		cerr << "ERROR: reads file must be set (-f | --file)." << endl;
 		exit(1);
 	}
