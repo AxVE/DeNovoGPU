@@ -12,7 +12,7 @@ using namespace std;
 
 //Parameters storage
 struct Params{
-	string readsFile="required";
+	string readsFile="file required";
 	string logs="cout";
 	int8_t requiredScore=60;
 	unsigned nbthreads=1;
@@ -141,11 +141,13 @@ Params parse(int argc, char* argv[]){
 
 	//Set the params
 		//Input read files
-	if(!options[READSFILE] && !options[GPUINFOS]){ //Test the file is set. It must be set(except if infos is called).
-		cerr << "ERROR: reads file must be set (-f | --file)." << endl;
-		exit(1);
+	if(!options[GPUINFOS]){
+		if(!options[READSFILE]){ //Test the file is set. It must be set(except if infos is called).
+			cerr << "ERROR: reads file must be set (-f | --file)." << endl;
+			exit(1);
+		}
+		else p.readsFile=options[READSFILE].arg;
 	}
-	else p.readsFile=options[READSFILE].arg;
 		//Output information destination
 	if(options[LOGS]){p.logs = options[LOGS].arg;}
 		//Required score
