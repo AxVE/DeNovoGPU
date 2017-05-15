@@ -114,9 +114,15 @@ void WorkerCL::run(const Contigs& contigs){
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
 	ev.wait();
 
-	//Get the score matrix
-	char* scores = new char[nbContigs*nbContigs];
-	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores);
+	//Get the score matrix: get the buffer into a 1D array then convert de 2D vectors array
+	char* scores_1D = new char[nbContigs*nbContigs];
+	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
+	vector< vector<char> > scores = vector< vector<char> >(nbContigs, vector<char>(nbContigs, 0));
+	for(size_t j=0; j<nbContigs; j++){
+		for(size_t i=0; i<nbContigs; i++){
+			scores[i][j] = scores_1D[i+nbContigs*j];
+		}
+	}
 
 	//TEST: display scores
 	cerr << "Seqs" << flush;
@@ -125,16 +131,16 @@ void WorkerCL::run(const Contigs& contigs){
 	for(size_t j=0; j < nbContigs; j++){
 		string t = to_string(j);
 		for(size_t i=0; i < nbContigs; i++){
-			t += "\t"+to_string(scores[i+nbContigs*j]);
+			t += "\t"+to_string(scores[i][j]);
 		}
 		cerr << t << endl;
 	}
 
 	//Clean the memory
 	delete ultraSequence;
-	delete scores;
+	delete scores_1D;
 	ultraSequence = nullptr;
-	scores = nullptr;
+	scores_1D = nullptr;
 }
 
 void WorkerCL::list_infos(Log& output){
@@ -196,6 +202,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		int i = get_global_id(0);
 		int j = get_global_id(1);
 
-		scores[i + infos[0]*j] = i + j;
+		scores[i + infos[0]*j] = i + 10*j;
 	}
 )CLCODE";
