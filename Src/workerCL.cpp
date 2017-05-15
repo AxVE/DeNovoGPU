@@ -170,6 +170,7 @@ et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	kernel void cmp_2_contigs(){
-		int i = 0;
+		int i = get_global_id(0);
+		int j = get_global_id(1);
 	}
 )CLCODE";
