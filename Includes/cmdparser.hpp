@@ -142,7 +142,7 @@ Params parse(int argc, char* argv[]){
 	//Set the params
 		//Input read files
 	if(!options[READSFILE]){ //Test the file is set
-		cerr << "ERROR: Polymer file must be set (-f | --file)." << endl;
+		cerr << "ERROR: reads file must be set (-f | --file)." << endl;
 		exit(1);
 	}
 	else p.readsFile=options[READSFILE].arg;
