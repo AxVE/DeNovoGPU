@@ -109,6 +109,7 @@ void WorkerCL::run(const Contigs& contigs){
 	//Update the kernel (gpu function)
 	m_kernel.setArg(0, buf_infos);
 	m_kernel.setArg(1, buf_scores);
+	m_kernel.setArg(2, buf_sizes);
 
 	//Run the kernel and wait the end
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
@@ -198,10 +199,26 @@ et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores){
-		int i = get_global_id(0);
-		int j = get_global_id(1);
+	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes){
+		int seq1_id = get_global_id(0);
+		int seq2_id = get_global_id(1);
 
-		scores[i + infos[0]*j] = i + 10*j;
+		//Get the position of the seqs in the ultraseq
+		unsigned long seq1_begin = 0;
+		unsigned long seq2_begin = 0;
+		unsigned long i=0;
+		while(i < seq1_id || i < seq2_id){
+			if(i < seq1_id){seq1_begin += seqs_sizes[i];}
+			if(i < seq2_id){seq2_begin += seqs_sizes[i];}
+			i++;
+		}
+		//Get the sizes and the end pos of the seqs
+		unsigned long seq1_size = seqs_sizes[seq1_id];
+		unsigned long seq2_size = seqs_sizes[seq2_id];
+		unsigned long seq1_end= seq1_begin + seq1_size - 1;
+		unsigned long seq2_end= seq2_begin + seq1_size - 1;
+
+		//Put result on scores buffer
+		scores[seq1_id + infos[0]*seq2_id] = seqs_sizes[seq1_id] + seqs_sizes[seq2_id];
 	}
 )CLCODE";
