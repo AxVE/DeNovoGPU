@@ -93,25 +93,48 @@ void WorkerCL::run(const Contigs& contigs){
 
 	//Prepare GPU for the run
 	cl::Event ev;
-		//infos buffer (64bits): nbcontigs
+		//infos buffer (64bits): number of contigs, size of the ultrasequence
 		//buffer only accepts non-dynamics arrays (even of size 1)
-	uint64_t infos[1] = {ultraSequenceSize};
+	uint64_t infos[2] = {nbContigs, ultraSequenceSize};
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
 	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), &infos);
+		//Prepare the buffer for the results matrix (it will be 1D so an id of {x,y} is id=x+y*x_size)
+		//The size of the buffer = char * x_size * y_size. Note: x_size == y_size == nb_contigs
+	unsigned int scores_size = sizeof(char)*nbContigs*nbContigs;
+	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, scores_size);
 		//sequences sizes (array of 64bits) buffer
 	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t)*nbContigs);
 	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
 
 	//Update the kernel (gpu function)
 	m_kernel.setArg(0, buf_infos);
+	m_kernel.setArg(1, buf_scores);
 
 	//Run the kernel and wait the end
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
 	ev.wait();
 
+	//Get the score matrix
+	char* scores = new char[nbContigs*nbContigs];
+	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores);
+
+	//TEST: display scores
+	cerr << "Seqs" << flush;
+	for(size_t i=0; i < nbContigs; i++){cerr << "\t" << i << flush;}
+	cerr << endl;
+	for(size_t j=0; j < nbContigs; j++){
+		string t = to_string(j);
+		for(size_t i=0; i < nbContigs; i++){
+			t += "\t"+to_string(scores[i+nbContigs*j]);
+		}
+		cerr << t << endl;
+	}
+
 	//Clean the memory
 	delete ultraSequence;
+	delete scores;
 	ultraSequence = nullptr;
+	scores = nullptr;
 }
 
 void WorkerCL::list_infos(Log& output){
@@ -169,8 +192,10 @@ et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	kernel void cmp_2_contigs(){
+	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores){
 		int i = get_global_id(0);
 		int j = get_global_id(1);
+
+		scores[i + infos[0]*j] = i + j;
 	}
 )CLCODE";
