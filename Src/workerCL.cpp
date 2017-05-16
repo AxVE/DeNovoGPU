@@ -59,7 +59,7 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
 WorkerCL::~WorkerCL(){
 }
 
-void WorkerCL::run(const Contigs& contigs){
+void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	/*
 	Create the string containing all contigs sequences
 	and store the list of contigs size (in same orders)
@@ -86,17 +86,22 @@ void WorkerCL::run(const Contigs& contigs){
 	uint64_t infos[3] = {nbContigs, ultraSequenceSize, longuest_contig_size};
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
 	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), &infos);
+	m_kernel.setArg(0, buf_infos); //update kernel
+
 		//Prepare the buffer for the results matrix (it will be 1D so an id of {x,y} is id=x+y*x_size)
 		//The size of the buffer = char * x_size * y_size. Note: x_size == y_size == nb_contigs
 	unsigned int scores_size = sizeof(char)*nbContigs*nbContigs;
 	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, scores_size);
+	m_kernel.setArg(1, buf_scores);
+
 		//sequences sizes (array of 64bits) buffer
 	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t)*nbContigs);
 	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
-		//ultrasequence
+	m_kernel.setArg(2, buf_sizes);
+
+		//ultrasequence, get each contigs sequence and add it in ultrasequence
 	char* ultraSequence = new char[ultraSequenceSize];
 	uint64_t i = 0;
-		//Get each contigs sequence and add it in ultraSequence
 	for(uint64_t c=0; c < nbContigs; c++){
 		string seq = contigs.get_seqContig(c);
 		for(size_t j=0; j < seq.size(); j++){
@@ -109,19 +114,17 @@ void WorkerCL::run(const Contigs& contigs){
 
 	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(char)*ultraSequenceSize);
 	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(char)*ultraSequenceSize, ultraSequence);
+	m_kernel.setArg(3, buf_ultraseq);
+
+	delete ultraSequence; //Clean  the memory
+	ultraSequence = nullptr;
+
 		//buffer for work items : they need 2 arrays for need2a and 2 array for each sequences. These arrays are of size of longuest contig.
 		/*
 			Each work item need its own array (for each arrays) allocated on local.
 			So a local array (of a work group) contains all concatenated array of the work items of the same group.
 			This local array have a size of longuest_contig_size*work_group_size number of elements.
 		*/
-	
-	
-	//Update the kernel (gpu function)
-	m_kernel.setArg(0, buf_infos);
-	m_kernel.setArg(1, buf_scores);
-	m_kernel.setArg(2, buf_sizes);
-	m_kernel.setArg(3, buf_ultraseq);
 
 	//Run the kernel and wait the end
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
@@ -150,9 +153,7 @@ void WorkerCL::run(const Contigs& contigs){
 	}
 
 	//Clean the memory
-	delete ultraSequence;
 	delete scores_1D;
-	ultraSequence = nullptr;
 	scores_1D = nullptr;
 }
 
