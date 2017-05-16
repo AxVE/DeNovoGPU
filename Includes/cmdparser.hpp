@@ -100,7 +100,7 @@ const option::Descriptor usage[] = {
 	{GPU, 0, "g", "gpu_use", Arg::None, "     -g --gpu_use  \tSwitch on OpenCL (GPU) matrix calculation instead on CPU."},
 	{CLPLATFORMID, 0, "p", "opencl_platform_id", Arg::Numeric, "     -p <numeric> --opencl_platform_id <numeric> \tThe id of the platform to use. Get list with --opencl_infos. Default: 0."},
 	{CLDEVICEID, 0, "d", "opencl_device_id", Arg::Numeric, "     -d <numeric> --opencl_device_id <numeric> \tThe id of the device to use. Get list with --opencl_infos. Default: 0."},
-	{CLWORKGROUPSIZE, 0, "w", "opencl_work_group_size", Arg::Numeric, "     -w <numeric> --opencl_work_group_size <numeric> \tThe size of group items in gpu. It impacts performances. Default: 1."},
+	{CLWORKGROUPSIZE, 0, "w", "opencl_work_group_size", Arg::Numeric, "     -w <numeric> --opencl_work_group_size <numeric> \tThe size of group items in gpu. It impacts performances. Be carefull, it should not exceed the maximal group size (use -i to know it). Default: 1."},
 	/*
 	{OUTPUT, 0, "o", "output", Arg::NonEmpty,	"     -o <path>/ --output <path>/  \tThe output prefix. A directory (with '/' at the end) is advice. Default: \"Results/\"."},
 	{ENVX, 0, "x", "envx", Arg::Numeric,		"     -x <int> --envx <int>  \tWidth of the environment. Default: 10."},
