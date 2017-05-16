@@ -186,7 +186,7 @@ void WorkerCL::list_infos(Log& output){
 	//Get devices
 	txt = "\n\t[Devices list]";
 	output.write(txt);
-	txt = "platform_id\tdevice_id\tdevice_name\tdevice_vendor\tdevice_profile\tdevice_version\tdriver_version\topencl_c_version";
+	txt = "platform_id\tdevice_id\tdevice_name\tdevice_vendor\tdevice_profile\tdevice_version\tdevice_globalmem\tdevice_localmem\tdevice_maxgroupsize\tdriver_version\topencl_c_version";
 	output.write(txt);
 	for(size_t p = 0; p < platforms.size(); p++){
 		vector<cl::Device> devices;
@@ -198,6 +198,9 @@ void WorkerCL::list_infos(Log& output){
 			txt += "\t" + device.getInfo<CL_DEVICE_VENDOR>();
 			txt += "\t" + device.getInfo<CL_DEVICE_PROFILE>();
 			txt += "\t" + device.getInfo<CL_DEVICE_VERSION>();
+			txt += "\t" + to_string(device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>())+"B";
+			txt += "\t" + to_string(device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())+"B";
+			txt += "\t" + to_string(device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 			txt += "\t" + device.getInfo<CL_DRIVER_VERSION>();
 			txt += "\t" + device.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
 			output.write(txt);
