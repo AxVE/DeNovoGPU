@@ -231,10 +231,19 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		unsigned long seq1_end= seq1_begin + seq1_size - 1;
 		unsigned long seq2_end= seq2_begin + seq1_size - 1;
 
-		//Get the sequences
-		char seq1[10];
+		//Test if same seq : =1 else =0
+		scores[seq1_id + infos[0]*seq2_id] = 0;
+		if(seq1_size == seq2_size){
+			bool same = true;
+			for(unsigned int i=0; i < seq1_size; i++){
+				if(ultraseq[seq1_begin+i] != ultraseq[seq2_begin+i]){
+					same = false;
+					i = seq1_size;
+				}
+			}
+			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
+		}
 
-		//Put result on scores buffer
-		scores[seq1_id + infos[0]*seq2_id] = seqs_sizes[seq1_id] + seqs_sizes[seq2_id];
+
 	}
 )CLCODE";
