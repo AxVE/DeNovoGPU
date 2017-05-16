@@ -79,25 +79,11 @@ void WorkerCL::run(const Contigs& contigs){
 		if(contigs_size[i] > longuest_contig_size){longuest_contig_size = contigs_size[i];}
 	}
 
-	//Create the ultraSequence
-	char* ultraSequence = new char[ultraSequenceSize];
-	uint64_t i = 0;
-		//Get each contigs sequence and add it in ultraSequence
-	for(uint64_t c=0; c < nbContigs; c++){
-		string seq = contigs.get_seqContig(c);
-		for(size_t j=0; j < seq.size();j++){
-			ultraSequence[i] = seq[j];
-			i++;
-		}
-	}
-	cout << "UltraSequence:" << endl;
-	cout << ultraSequence << endl;
-
 	//Prepare GPU for the run
 	cl::Event ev;
-		//infos buffer (64bits): number of contigs, size of the ultrasequence
+		//infos buffer (64bits): number of contigs, size of the ultrasequence, size of longuest contig
 		//buffer only accepts non-dynamics arrays (even of size 1)
-	uint64_t infos[2] = {nbContigs, ultraSequenceSize};
+	uint64_t infos[3] = {nbContigs, ultraSequenceSize, longuest_contig_size};
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
 	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), &infos);
 		//Prepare the buffer for the results matrix (it will be 1D so an id of {x,y} is id=x+y*x_size)
@@ -108,9 +94,27 @@ void WorkerCL::run(const Contigs& contigs){
 	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t)*nbContigs);
 	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
 		//ultrasequence
+	char* ultraSequence = new char[ultraSequenceSize];
+	uint64_t i = 0;
+		//Get each contigs sequence and add it in ultraSequence
+	for(uint64_t c=0; c < nbContigs; c++){
+		string seq = contigs.get_seqContig(c);
+		for(size_t j=0; j < seq.size(); j++){
+				ultraSequence[i] = seq[j];
+				i++;
+		}
+	}
+	cout << "UltraSequence:" << endl;
+	cout << ultraSequence << endl;
+
 	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(char)*ultraSequenceSize);
 	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(char)*ultraSequenceSize, ultraSequence);
 		//buffer for work items : they need 2 arrays for need2a and 2 array for each sequences. These arrays are of size of longuest contig.
+		/*
+			Each work item need its own array (for each arrays) allocated on local.
+			So a local array (of a work group) contains all concatenated array of the work items of the same group.
+			This local array have a size of longuest_contig_size*work_group_size number of elements.
+		*/
 	
 	
 	//Update the kernel (gpu function)
