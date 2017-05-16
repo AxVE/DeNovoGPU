@@ -20,6 +20,7 @@ struct Params{
 	bool gpu=false;
 	size_t opencl_platform_id = 0;
 	size_t opencl_device_id = 0;
+	size_t opencl_work_group_size = 1;
 
 	
 	/*
@@ -43,6 +44,7 @@ struct Params{
 		if(gpu){
 			s+= "\nopencl_platform_id="+to_string(opencl_platform_id);
 			s+= "\nopencl_device_id="+to_string(opencl_device_id);
+			s+="\nopencl_work_group_size="+to_string(opencl_work_group_size);
 		}
 		return s;
 	}
@@ -79,7 +81,7 @@ struct Arg: public option::Arg
 
 //Define options list
 //enum optionIndex { UNKNOWN, HELP, VERSION, POLYFILE, OUTPUT, ENVX, ENVY, ENVZ, NBITER, WRITEACH, NB_THREAD, PACKAGE_SIZE, GPU };
-enum optionIndex { UNKNOWN, HELP, VERSION, READSFILE, LOGS, REQUIREDSCORE, NBTHREADS, GPU, GPUINFOS, CLPLATFORMID, CLDEVICEID};
+enum optionIndex { UNKNOWN, HELP, VERSION, READSFILE, LOGS, REQUIREDSCORE, NBTHREADS, GPU, GPUINFOS, CLPLATFORMID, CLDEVICEID, CLWORKGROUPSIZE};
 
 //Define parser
 const option::Descriptor usage[] = {
@@ -98,6 +100,7 @@ const option::Descriptor usage[] = {
 	{GPU, 0, "g", "gpu_use", Arg::None, "     -g --gpu_use  \tSwitch on OpenCL (GPU) matrix calculation instead on CPU."},
 	{CLPLATFORMID, 0, "p", "opencl_platform_id", Arg::Numeric, "     -p <numeric> --opencl_platform_id <numeric> \tThe id of the platform to use. Get list with --opencl_infos. Default: 0."},
 	{CLDEVICEID, 0, "d", "opencl_device_id", Arg::Numeric, "     -d <numeric> --opencl_device_id <numeric> \tThe id of the device to use. Get list with --opencl_infos. Default: 0."},
+	{CLWORKGROUPSIZE, 0, "w", "opencl_work_group_size", Arg::Numeric, "     -w <numeric> --opencl_work_group_size <numeric> \tThe size of group items in gpu. It impacts performances. Default: 1."},
 	/*
 	{OUTPUT, 0, "o", "output", Arg::NonEmpty,	"     -o <path>/ --output <path>/  \tThe output prefix. A directory (with '/' at the end) is advice. Default: \"Results/\"."},
 	{ENVX, 0, "x", "envx", Arg::Numeric,		"     -x <int> --envx <int>  \tWidth of the environment. Default: 10."},
@@ -190,6 +193,7 @@ Params parse(int argc, char* argv[]){
 		p.gpu = true;
 		if(options[CLPLATFORMID]){p.opencl_platform_id = stoul(options[CLPLATFORMID].arg);}
 		if(options[CLDEVICEID]){p.opencl_device_id = stoul(options[CLDEVICEID].arg);}
+		if(options[CLWORKGROUPSIZE]){p.opencl_work_group_size = stoul(options[CLWORKGROUPSIZE].arg);}
 	}
 	/*
 	if(options[OUTPUT]){p.outPrefix = options[OUTPUT].arg;}
