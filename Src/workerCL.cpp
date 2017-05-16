@@ -67,14 +67,16 @@ void WorkerCL::run(const Contigs& contigs){
 	an uint64_t (ulong) to be sure it is 64bits as cl_ulong
 	*/
 
-	//Get list of contigs size and the total length of the
-	//contigs concatenation
+	//Get list of contigs size, the total length of the
+	//contigs concatenation and the longuest contig size
 	uint64_t nbContigs = contigs.get_nbContigs();
 	uint64_t ultraSequenceSize = 0;
+	uint64_t longuest_contig_size = 0;
 	vector<uint64_t> contigs_size (nbContigs, 0);
 	for(uint64_t i=0; i < nbContigs; i++){
 		contigs_size[i] = contigs.get_sizeContig(i);
 		ultraSequenceSize += contigs_size[i];
+		if(contigs_size[i] > longuest_contig_size){longuest_contig_size = contigs_size[i];}
 	}
 
 	//Create the ultraSequence
@@ -105,11 +107,17 @@ void WorkerCL::run(const Contigs& contigs){
 		//sequences sizes (array of 64bits) buffer
 	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t)*nbContigs);
 	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
-
+		//ultrasequence
+	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(char)*ultraSequenceSize);
+	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(char)*ultraSequenceSize, ultraSequence);
+		//buffer for work items : they need 2 arrays for need2a and 2 array for each sequences. These arrays are of size of longuest contig.
+	
+	
 	//Update the kernel (gpu function)
 	m_kernel.setArg(0, buf_infos);
 	m_kernel.setArg(1, buf_scores);
 	m_kernel.setArg(2, buf_sizes);
+	m_kernel.setArg(3, buf_ultraseq);
 
 	//Run the kernel and wait the end
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
@@ -199,7 +207,7 @@ et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes){
+	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq){
 		int seq1_id = get_global_id(0);
 		int seq2_id = get_global_id(1);
 
@@ -217,6 +225,9 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		unsigned long seq2_size = seqs_sizes[seq2_id];
 		unsigned long seq1_end= seq1_begin + seq1_size - 1;
 		unsigned long seq2_end= seq2_begin + seq1_size - 1;
+
+		//Get the sequences
+		char seq1[10];
 
 		//Put result on scores buffer
 		scores[seq1_id + infos[0]*seq2_id] = seqs_sizes[seq1_id] + seqs_sizes[seq2_id];
