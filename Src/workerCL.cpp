@@ -174,7 +174,7 @@ void WorkerCL::list_infos(Log& output){
 	output.write(txt);
 	for(size_t i=0; i < platforms.size(); i++){
 		cl::Platform& p = platforms[i];
-
+		txt = to_string(i);
 		txt += "\t" + p.getInfo<CL_PLATFORM_NAME>();
 		txt += "\t" + p.getInfo<CL_PLATFORM_PROFILE>();
 		txt += "\t" + p.getInfo<CL_PLATFORM_VENDOR>();
