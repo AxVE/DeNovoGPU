@@ -219,6 +219,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		int seq1_id = get_global_id(0);
 		int seq2_id = get_global_id(1);
 
+		/* Old way: basic memory. Work
 		//Get the position of the seqs in the ultraseq
 		unsigned long seq1_begin = 0;
 		unsigned long seq2_begin = 0;
@@ -228,6 +229,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			if(i < seq2_id){seq2_begin += seqs_sizes[i];}
 			i++;
 		}
+
 		//Get the sizes and the end pos of the seqs
 		unsigned long seq1_size = seqs_sizes[seq1_id];
 		unsigned long seq2_size = seqs_sizes[seq2_id];
@@ -246,7 +248,34 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			}
 			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
 		}
+		*/
 
+		//Get the position of seqs and sizes
+		global char* seq1_ptr = NULL;
+		global char* seq2_ptr = NULL;
+			//Calculate the begin for each item (the for boucle is on all contigs (infos[0]) but it's stop before)
+		unsigned long start = 0;
+		for(unsigned long i = 0; i < seq1_id; i++){start += seqs_sizes[i];}
+		seq1_ptr = &ultraseq[start];
+		start = 0;
+		for(unsigned long i = 0; i < seq2_id; i++){start += seqs_sizes[i];}
+		seq2_ptr = &ultraseq[start];
+			//get sizes
+		unsigned long seq1_size = seqs_sizes[seq1_id];
+		unsigned long seq2_size = seqs_sizes[seq2_id];
+			
+		//Test: if same seq then =1 else =0
+		scores[seq1_id + infos[0]*seq2_id] = 0;
+		if(seq1_size == seq2_size){
+			bool same=true;
+			for(unsigned int i=0; i < seq1_size; i++){
+				if(seq1_ptr[i] != seq2_ptr[i]){
+					same = false;
+					i = seq1_size;
+				}
+			}
+			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
+		}
 
 	}
 )CLCODE";
