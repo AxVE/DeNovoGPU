@@ -79,6 +79,8 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 		if(contigs_size[i] > longuest_contig_size){longuest_contig_size = contigs_size[i];}
 	}
 
+	cout << "ultraSeqSize =  " << to_string(ultraSequenceSize*sizeof(char)) << "B" << endl;
+
 	//Prepare GPU for the run
 	cl::Event ev;
 		//infos buffer (64bits): number of contigs, size of the ultrasequence, size of longuest contig
@@ -109,9 +111,6 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 				i++;
 		}
 	}
-	cout << "UltraSequence:" << endl;
-	cout << ultraSequence << endl;
-
 	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(char)*ultraSequenceSize);
 	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(char)*ultraSequenceSize, ultraSequence);
 	m_kernel.setArg(3, buf_ultraseq);
