@@ -82,13 +82,12 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 		if(contigs_size[i] > longuest_contig_size){longuest_contig_size = contigs_size[i];}
 	}
 
-	string txt = "ultraSeqSize = "+to_string(ultraSequenceSize*sizeof(char))+"B";
-	m_log->write(txt);
 
 	//Prepare GPU for the run
 	cl::Event ev;
 		//infos buffer (64bits): number of contigs, size of the ultrasequence, size of longuest contig
 		//buffer only accepts non-dynamics arrays (even of size 1)
+	m_log->write("Prepare infos buffer");
 	uint64_t infos[3] = {nbContigs, ultraSequenceSize, longuest_contig_size};
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
 	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), &infos);
@@ -96,16 +95,21 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 
 		//Prepare the buffer for the results matrix (it will be 1D so an id of {x,y} is id=x+y*x_size)
 		//The size of the buffer = char * x_size * y_size. Note: x_size == y_size == nb_contigs
+	m_log->write("Prepare scores matrix buffer");
 	unsigned int scores_size = sizeof(char)*nbContigs*nbContigs;
 	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, scores_size);
 	m_kernel.setArg(1, buf_scores);
 
 		//sequences sizes (array of 64bits) buffer
+	m_log->write("Prepare contigs sizes buffer");
 	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t)*nbContigs);
 	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
 	m_kernel.setArg(2, buf_sizes);
 
 		//ultrasequence, get each contigs sequence and add it in ultrasequence
+	m_log->write("Prepare ultraSequence buffer");
+	string txt = "ultraSeqSize = "+to_string(ultraSequenceSize*sizeof(char))+"B";
+	m_log->write(txt);
 	char* ultraSequence = new char[ultraSequenceSize];
 	uint64_t i = 0;
 	for(uint64_t c=0; c < nbContigs; c++){
@@ -130,10 +134,12 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 		*/
 
 	//Run the kernel and wait the end
+	m_log->write("Run kernel");
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
 	ev.wait();
 
 	//Get the score matrix: get the buffer into a 1D array then convert de 2D vectors array
+	m_log->write("Get scores matrix");
 	char* scores_1D = new char[nbContigs*nbContigs];
 	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
 	vector< vector<char> > scores = vector< vector<char> >(nbContigs, vector<char>(nbContigs, 0));
