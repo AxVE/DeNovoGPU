@@ -149,9 +149,9 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	m_kernel.setArg(5, buf_localChar);
 
 
-	//Run the kernel and wait the end
+	//Run the kernel and wait the end (global ids is 2D (2*contig id), local is 1D (work group item id)
 	m_log->write("Run kernel");
-	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NullRange, NULL, &ev);
+	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NDRange(work_group_size), NULL, &ev);
 	ev.wait();
 
 	//Get the score matrix: get the buffer into a 1D array then convert de 2D vectors array
@@ -245,6 +245,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq, local char *charbufloc, local long *intbufloc){
 		int seq1_id = get_global_id(0);
 		int seq2_id = get_global_id(1);
+		int work_id = get_local_id(0);
 
 		/* Old way: basic memory. Work
 		//Get the position of the seqs in the ultraseq
