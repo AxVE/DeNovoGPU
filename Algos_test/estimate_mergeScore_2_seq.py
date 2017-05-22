@@ -45,6 +45,9 @@ def main(seqs):
 			
 			#needleman 2 arrays based
 			print("need2a"+coupleDescript+analyzeFct(need2arrays,seqs[i],seqs[j]))
+			
+                        #needleman 2 arrays based
+			print("need1a"+coupleDescript+analyzeFct(need1array,seqs[i],seqs[j]))
 
 			#dot_cut
 			print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
@@ -167,7 +170,55 @@ def need2arrays(seq1, seq2):
 	# Get the best possibilities score which is inside the last line + the bestIN (pseudo last column)
 	previous.append(bestIN) #Previous is last because we moved buffers. We add bestIN to it
 	return 100*max(previous)/min(len1,len2) #Percent and normalize by theorical max best score (full match)
-		
+
+'''
+Algorithm 'Need1Array'
+Same algorithm (needleman&wunsch) but using a uniq array of size seq1.size()
+as we only need the previous/actual line to calculate the current one.
+'''
+def need1array(seq1, seq2):
+    #Get sequences length
+    len1 = len(seq1)
+    len2 = len(seq2)
+
+    # Prepare scoring array and previous (i-1, j-1) value buffer
+    scores = [0]*len1
+    previous_align_score = 0
+    best = 0
+
+    # Calculate the first line (seq2[0] against seq1)
+    for i in range(len1): scores[i] = (1 if seq1[i]==seq2[0] else -1)
+    best = scores[-1]
+
+    #Complete the needle
+    for j in range(1, len2):
+        previous_align_score = scores[0]
+        # first nuc of seq1 : Is an indel (as the first is forced to be seq2[0])
+        scores[0]=scores[0]-1
+        
+        #Do other nucs
+        for i in range (1, len1):
+            # It can be a match, a mismatch, an indel (of seq1), an indel (of seq2)
+            s = max(
+                previous_align_score + (1 if seq1[i]==seq2[j] else -1), #match/mismatch
+                scores[i-1]-1, #indel from seq1
+                scores[i]-1, #indel from seq2
+            )
+            #get 'old' align
+            previous_align_score = scores[i]
+            #input new score
+            scores[i]=s
+
+        #best ? (end of seq1)
+        if scores[-1] > best: best = scores[-1]
+
+    #Check the best is not when seq2 ends in seq1
+    bs = max(scores)
+    if bs > best: best = bs
+
+    #return best
+    return 100*best/min(len1,len2)
+
 '''
 Algorithm 'dot_cut'.
 The principe is to increase the score when the merge is contiguous (diagonal
