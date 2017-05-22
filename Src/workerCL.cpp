@@ -132,6 +132,22 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 			So a local array (of a work group) contains all concatenated array of the work items of the same group.
 			This local array have a size of longuest_contig_size*work_group_size number of elements.
 		*/
+	m_log->write("Prepapre work-items buffers");
+	txt = "itemBufferSize = "+to_string(longuest_contig_size);
+	m_log->write(txt);
+	txt = "workGroupSize = "+to_string(work_group_size);
+	m_log->write(txt);
+	size_t bufSize = longuest_contig_size*work_group_size*sizeof(char);
+	txt= "charBufferGroup = "+to_string(bufSize)+"B";
+	m_log->write(txt);
+	cl::Buffer buf_localChar (m_context, CL_MEM_READ_WRITE, bufSize);
+	m_kernel.setArg(4, buf_localChar);
+	bufSize = longuest_contig_size*work_group_size*sizeof(int64_t);
+	txt= "intBufferGroup = "+to_string(bufSize)+"B";
+	m_log->write(txt);
+	cl::Buffer buf_localInt (m_context, CL_MEM_READ_WRITE, bufSize);
+	m_kernel.setArg(5, buf_localChar);
+
 
 	//Run the kernel and wait the end
 	m_log->write("Run kernel");
@@ -226,7 +242,7 @@ et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq){
+	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq, local char *charbufloc, local long *intbufloc){
 		int seq1_id = get_global_id(0);
 		int seq2_id = get_global_id(1);
 
