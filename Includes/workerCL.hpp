@@ -10,7 +10,7 @@
 
 class WorkerCL {
 	public:
-		WorkerCL(size_t platform_id=0, size_t device_id=0);
+		WorkerCL(size_t platform_id, size_t device_id, Log& log);
 		~WorkerCL();
 
 		//Return the matrix of coupling scores of a contigs set
@@ -28,9 +28,11 @@ class WorkerCL {
 		cl::Program m_program;
 		cl::Kernel m_kernel;
 		
-
 		//CL kernel
 		static std::string kernel_cmp_2_contigs;
+
+		//Ouputs infos manager
+		Log* m_log = nullptr;
 };
 
 

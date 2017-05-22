@@ -13,7 +13,10 @@
 
 using namespace std;
 
-WorkerCL::WorkerCL(size_t platform_id, size_t device_id){
+WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
+	//Get the log output manager
+	m_log = &log;	
+
 	/* GPU environment preparation */
 	
 	//Get platforms (drivers) list and keep the one to be use
@@ -79,7 +82,8 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 		if(contigs_size[i] > longuest_contig_size){longuest_contig_size = contigs_size[i];}
 	}
 
-	cout << "ultraSeqSize =  " << to_string(ultraSequenceSize*sizeof(char)) << "B" << endl;
+	string txt = "ultraSeqSize = "+to_string(ultraSequenceSize*sizeof(char))+"B";
+	m_log->write(txt);
 
 	//Prepare GPU for the run
 	cl::Event ev;
@@ -140,16 +144,18 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	}
 
 	//TEST: display scores
-	cerr << "Seqs" << flush;
-	for(size_t i=0; i < nbContigs; i++){cerr << "\t" << i << flush;}
-	cerr << endl;
+	/*
+	txt= "Seqs";
+	for(size_t i=0; i < nbContigs; i++){txt += "\t" + to_string(i);}
+	m_log->write(txt);
 	for(size_t j=0; j < nbContigs; j++){
-		string t = to_string(j);
+		txt = to_string(j);
 		for(size_t i=0; i < nbContigs; i++){
-			t += "\t"+to_string(scores[i][j]);
+			txt += "\t"+to_string(scores[i][j]);
 		}
-		cerr << t << endl;
+		m_log->write(txt);
 	}
+	*/
 
 	//Clean the memory
 	delete scores_1D;

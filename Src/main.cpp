@@ -71,7 +71,7 @@ int main(int argc, char* argv[]){
 	try{
 		if(params.gpu){
 			log.write("=== OpenCL initialisation ===");
-			workerCL = new WorkerCL(params.opencl_platform_id, params.opencl_device_id);
+			workerCL = new WorkerCL(params.opencl_platform_id, params.opencl_device_id, log);
 		}
 	}
 	catch(string opencl_err){
