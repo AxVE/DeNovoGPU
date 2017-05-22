@@ -129,7 +129,7 @@ int main(int argc, char* argv[]){
 		
 			// GPU ?
 		if(params.gpu){
-			workerCL->run(contigs);
+			workerCL->run(contigs, params.opencl_work_group_size);
 		}
 			// Multithreading ?
 		else if(params.nbthreads > 1){
