@@ -243,48 +243,49 @@ Reminder:
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	//kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq, local char *charbufloc, local long *intbufloc){
 	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __local long *intbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
 		size_t work_id = get_local_id(0);
+		unsigned long nbContigs = infos[0];
 
 		//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
 			//Get size
 		unsigned long seq1_size = seqs_sizes[seq1_id];
 			//Prepare the buffer to use
-		local char* seq1_ptr = &charbufloc[infos[2]*work_id];
-			//Calculate the begin for each item (the for boucle is on all contigs (infos[0]) but it's stop before (seq1_id < infos[0]))
+		local char* seq1 = &charbufloc[infos[2]*work_id];
+			//Calculate the begin for each item (the for boucle is on all contigs (nbContigs) but it's stop before (seq1_id < nbContigs))
 		unsigned long start = 0;
 		for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
 			//Copy the contig sequence in local buffer (copy each char one by one from global to local)
-		for(unsigned long c=start; c < start+seq1_size; c++){
-			seq1_ptr[c-start] = ultraseq[c];
+		for(unsigned long c=0; c < seq1_size; c++){
+			seq1[c] = ultraseq[start+c];
 		}
 
 		//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
 			//Get size
 		unsigned long seq2_size = seqs_sizes[seq2_id];
-			//Prepare the buffer to use
-		global char* seq2_ptr = NULL;
 			//Calculate the begin of this seq in ultraseq
 		start = 0;
 		for(unsigned long i = 0; i < seq2_id; i++){start += seqs_sizes[i];}
 			//Get seq
-		seq2_ptr = &ultraseq[start];
+		global char* seq2 = &ultraseq[start];
+
+		//Get the local int array buffer
+		//local long *inta = &intbufloc[infos[2]*work_id];
 
 		//Test: if same seq then =1 else =0
-		scores[seq1_id + infos[0]*seq2_id] = 0;
+		scores[seq1_id + nbContigs*seq2_id] = 0;
 		if(seq1_size == seq2_size){
 			bool same=true;
 			for(unsigned int i=0; i < seq1_size; i++){
-				if(seq1_ptr[i] != seq2_ptr[i]){
+				if(seq1[i] != seq2[i]){
 					same = false;
 					i = seq1_size;
 				}
 			}
-			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
+			if(same){scores[seq1_id+nbContigs*seq2_id]=1;}
 		}
 	}
 )CLCODE";
