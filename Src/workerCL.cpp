@@ -70,9 +70,13 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	an uint64_t (ulong) to be sure it is 64bits as cl_ulong
 	*/
 
+	string txt = ""; //Used to create then output messages
+
 	//Get list of contigs size, the total length of the
 	//contigs concatenation and the longuest contig size
+	m_log->write("Get contigs informations");
 	uint64_t nbContigs = contigs.get_nbContigs();
+	txt = "nbContigs = "+to_string(nbContigs); m_log->write(txt);
 	uint64_t ultraSequenceSize = 0;
 	uint64_t longuest_contig_size = 0;
 	vector<uint64_t> contigs_size (nbContigs, 0);
@@ -82,6 +86,15 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		if(contigs_size[i] > longuest_contig_size){longuest_contig_size = contigs_size[i];}
 	}
 
+	size_t nbGlobalElem = nbContigs*nbContigs;
+	txt="global_nb_elems = "+to_string(nbGlobalElem); m_log->write(txt);
+		//Important: the size of global range MUST be a multiplicative of local range.
+		//So the size of local range is the greatest divisor of nbGlobalElem below or equal to work_group_size
+	while(nbGlobalElem%work_group_size){work_group_size--;}
+	txt="work_group_size = "+to_string(work_group_size); m_log->write(txt);
+	
+	txt = "buffer_1item_Size = "+to_string(longuest_contig_size);
+	m_log->write(txt);
 
 	//Prepare GPU for the run
 	cl::Event ev;
@@ -96,7 +109,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		//Prepare the buffer for the results matrix (it will be 1D so an id of {x,y} is id=x+y*x_size)
 		//The size of the buffer = char * x_size * y_size. Note: x_size == y_size == nb_contigs
 	m_log->write("Prepare scores matrix buffer");
-	unsigned int scores_size = sizeof(char)*nbContigs*nbContigs;
+	unsigned int scores_size = sizeof(char)*nbGlobalElem;
 	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, scores_size);
 	m_kernel.setArg(1, buf_scores);
 
@@ -108,9 +121,9 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 
 		//ultrasequence, get each contigs sequence and add it in ultrasequence
 	m_log->write("Prepare ultraSequence buffer");
-	string txt = "ultraSeqSize = "+to_string(ultraSequenceSize*sizeof(char))+"B";
+	txt = "ultraSeqSize = "+to_string(ultraSequenceSize*sizeof(cl_char))+"B";
 	m_log->write(txt);
-	char* ultraSequence = new char[ultraSequenceSize];
+	cl_char* ultraSequence = new cl_char[ultraSequenceSize];
 	uint64_t i = 0;
 	for(uint64_t c=0; c < nbContigs; c++){
 		string seq = contigs.get_seqContig(c);
@@ -119,8 +132,8 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 				i++;
 		}
 	}
-	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(char)*ultraSequenceSize);
-	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(char)*ultraSequenceSize, ultraSequence);
+	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(cl_char)*ultraSequenceSize);
+	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(cl_char)*ultraSequenceSize, ultraSequence);
 	m_kernel.setArg(3, buf_ultraseq);
 
 	delete ultraSequence; //Clean  the memory
@@ -136,15 +149,11 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 			This local array have a size of longuest_contig_size*work_group_size number of elements.
 		*/
 	m_log->write("Prepare work-items buffers");
-	txt = "itemBufferSize = "+to_string(longuest_contig_size);
-	m_log->write(txt);
-	txt = "workGroupSize = "+to_string(work_group_size);
-	m_log->write(txt);
-	size_t locSize = longuest_contig_size*work_group_size*sizeof(int8_t);
+	size_t locSize = longuest_contig_size*work_group_size*sizeof(cl_char);
 	txt= "charBufferGroup = "+to_string(locSize)+"B";
 	m_log->write(txt);
 	m_kernel.setArg(4, locSize, NULL); //Declare only the space size so it can be on local
-	locSize = longuest_contig_size*work_group_size*sizeof(int64_t);
+	locSize = longuest_contig_size*work_group_size*sizeof(cl_long);
 	txt= "intBufferGroup = "+to_string(locSize)+"B";
 	m_log->write(txt);
 	m_kernel.setArg(5, locSize, NULL); //Declare only the space size so it can be on local
@@ -152,18 +161,13 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	//Run the kernel and wait the end (global ids (contig1_id, contig2_id) is 2D to 1D (nbContigs*nbContigs), local is 1D (work group item id)
 	//So contig2_id = global_id/nbContigs and contig1_id=global_id-contig2_id*nbContigs
 	m_log->write("Run kernel");
-	size_t nbGlobalElem = nbContigs*nbContigs;
-	txt="global_nb_elems="+to_string(nbGlobalElem); m_log->write(txt);
-		//Important: the number of global ids MUST be a multiplicative of the number of local ids. So It is the greastest divisor of nbGlobalElem below or equal to work_group_size
-	size_t nbLocalElem = work_group_size; while(nbGlobalElem%nbLocalElem){nbLocalElem--;}
-	txt="local_nb_elems="+to_string(nbLocalElem); m_log->write(txt);
 		//Launch kernel
-	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(nbLocalElem), NULL, &ev);
+	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(work_group_size), NULL, &ev);
 	ev.wait();
 
 	//Get the scores matrix: get the buffer into a 1D array then convert de 2D vectors array
 	m_log->write("Get scores matrix");
-	int8_t* scores_1D = new int8_t[nbContigs*nbContigs];
+	int8_t* scores_1D = new int8_t[nbGlobalElem];
 	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
 	vector< vector<int8_t> > scores = vector< vector<int8_t> >(nbContigs, vector<int8_t>(nbContigs, 0));
 	for(size_t j=0; j<nbContigs; j++){
@@ -175,6 +179,15 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	//Clean the memory
 	delete scores_1D;
 	scores_1D = nullptr;
+
+	//Test ultraseq
+	ultraSequence = new cl_char[ultraSequenceSize];
+	m_commandqueue.enqueueReadBuffer(buf_ultraseq, CL_TRUE, 0, ultraSequenceSize, ultraSequence);
+	txt = "utlraseq_after = ";
+	for(size_t i=0; i < ultraSequenceSize; i++){txt += to_string(ultraSequence[i]);}
+	m_log->write(txt);
+	delete ultraSequence;
+	ultraSequence = nullptr;
 
 	//Return the scores matrix
 	return scores;
@@ -271,27 +284,42 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		unsigned long seq1_size = seqs_sizes[seq1_id];
 			//Prepare the buffer to use
 		local char* seq1 = &charbufloc[infos[2]*work_id];
-			//Calculate the begin for each item (the for boucle is on all contigs (nbContigs) but it's stop before (seq1_id < nbContigs))
+			//Get the position of the first sequence inside ultraseq
 		unsigned long start = 0;
 		for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
 			//Copy the contig sequence in local buffer (copy each char one by one from global to local)
 		for(unsigned long c=0; c < seq1_size; c++){
 			seq1[c] = ultraseq[start+c];
 		}
+		
+		unsigned long seq1_start = start; //DEBUG
+		//Test
+		bool diff = false;
+		for(unsigned long i=0; i < seq1_size; i++){
+			//if(ultraseq[seq1_start+i] != seq2[i]){ //DEBUG -> works
+			if(seq1[i] != ultraseq[seq1_start+i]){
+				i = seq1_size;
+				diff = true;
+			}
+		}
+		if(diff){scores[seq1_id+nbContigs*seq2_id]=42;}
+		else{scores[seq1_id+nbContigs*seq2_id]=0;}
 
 		//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
 			//Get size
 		unsigned long seq2_size = seqs_sizes[seq2_id];
 			//Calculate the begin of this seq in ultraseq
 		start = 0;
-		for(unsigned long i = 0; i < seq2_id; i++){start += seqs_sizes[i];}
+		for(unsigned long i=0; i < seq2_id; i++){start += seqs_sizes[i];}
 			//Get seq
 		global char* seq2 = &ultraseq[start];
+		
+		unsigned long seq2_start = start; //DEBUG
 
 		//Get the local int array buffer
 		local long *inta = &intbufloc[infos[2]*work_id];
 
 		//Get match score of seq2 on seq1
-		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+		//scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
 	}
 )CLCODE";
