@@ -7,32 +7,11 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <cmath>
 
 #include "log.hpp"
 #include "reads.hpp"
 
 using namespace std;
-
-//This function return the gcd between 2 numbers
-size_t gcd(size_t a, size_t b){
-	//Using binary method (so can be heavily optimise)
-	//Note: the gcd() in algorithm std IS actually (05/2017) NOT official ! So It's not use here
-	//C++17 should include a gcd() function in <numeric>
-	size_t d = 0;
-	while(a%2==0 && b%2==0){
-		a=a/2;
-		b=b/2;
-		d++;
-	}
-	while(a!=b){
-		if(a%2==0){a=a/2;}
-		else if(b%2==0){b=b/2;}
-		else if(a>b){a=(a-b)/2;}
-		else{b=(b-a)/2;}
-	}
-	return a*pow(2,d);
-}
 
 WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
 	//Get the log output manager
@@ -179,11 +158,11 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	m_log->write("Run kernel");
 	size_t nbGlobalElem = nbContigs*nbContigs;
 	txt="global_nb_elems="+to_string(nbGlobalElem); m_log->write(txt);
-		//Important: the number of global ids MUST be a multiplicative of the number of local ids. So = greatest_common_divisor(global_ids,local_ids)
-	size_t nbLocalElem = gcd(nbGlobalElem, work_group_size);
+		//Important: the number of global ids MUST be a multiplicative of the number of local ids. So It is the greastest divisor of nbGlobalElem below or equal to work_group_size
+	size_t nbLocalElem = work_group_size; while(nbGlobalElem%nbLocalElem){nbLocalElem--;}
 	txt="local_nb_elems="+to_string(nbLocalElem); m_log->write(txt);
 		//Launch kernel
-	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(work_group_size), NULL, &ev);
+	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(nbLocalElem), NULL, &ev);
 	ev.wait();
 
 	//Get the score matrix: get the buffer into a 1D array then convert de 2D vectors array
