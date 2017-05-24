@@ -136,22 +136,18 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 			This local array have a size of longuest_contig_size*work_group_size number of elements.
 		*/
 	m_log->write("Prepare work-items buffers");
-	/*
 	txt = "itemBufferSize = "+to_string(longuest_contig_size);
 	m_log->write(txt);
 	txt = "workGroupSize = "+to_string(work_group_size);
 	m_log->write(txt);
-	size_t bufSize = longuest_contig_size*work_group_size*sizeof(char);
-	txt= "charBufferGroup = "+to_string(bufSize)+"B";
+	size_t locSize = longuest_contig_size*work_group_size*sizeof(char);
+	txt= "charBufferGroup = "+to_string(locSize)+"B";
 	m_log->write(txt);
-	cl::Buffer buf_localChar (m_context, CL_MEM_READ_WRITE, bufSize);
-	m_kernel.setArg(4, buf_localChar);
-	bufSize = longuest_contig_size*work_group_size*sizeof(int64_t);
-	txt= "intBufferGroup = "+to_string(bufSize)+"B";
+	m_kernel.setArg(4, locSize, NULL); //Declare only the space size so it can be on local
+	locSize = longuest_contig_size*work_group_size*sizeof(int64_t);
+	txt= "intBufferGroup = "+to_string(locSize)+"B";
 	m_log->write(txt);
-	cl::Buffer buf_localInt (m_context, CL_MEM_READ_WRITE, bufSize);
-	m_kernel.setArg(5, buf_localChar);
-	*/
+	m_kernel.setArg(5, locSize, NULL); //Declare only the space size so it can be on local
 
 	//Run the kernel and wait the end (global ids (contig1_id, contig2_id) is 2D to 1D (nbContigs*nbContigs), local is 1D (work group item id)
 	//So contig2_id = global_id/nbContigs and contig1_id=global_id-contig2_id*nbContigs
@@ -257,14 +253,11 @@ Reminder:
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq, local char *charbufloc, local long *intbufloc){
-	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq){
-		int seq2_id = get_global_id(0)/infos[0];
-		int seq1_id = get_global_id(0) - seq2_id*infos[0];
-		int work_id = get_local_id(0);
-
-		scores[seq1_id+infos[0]*seq2_id] = seq1_id*10+seq2_id;
-
-		/*
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __local long *intbufloc){
+		size_t gid = get_global_id(0);
+		size_t seq2_id = gid/infos[0];
+		size_t seq1_id = gid - seq2_id*infos[0];
+		size_t work_id = get_local_id(0);
 
 		//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
 			//Get size
@@ -302,7 +295,5 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			}
 			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
 		}
-		*/
-
 	}
 )CLCODE";
