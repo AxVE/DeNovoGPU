@@ -129,7 +129,7 @@ int main(int argc, char* argv[]){
 		
 			// GPU ?
 		if(params.gpu){
-			workerCL->run(contigs, params.opencl_work_group_size);
+			scores = workerCL->run(contigs, params.opencl_work_group_size);
 		}
 			// Multithreading ?
 		else if(params.nbthreads > 1){
@@ -170,7 +170,6 @@ int main(int argc, char* argv[]){
 			contigs_cmp(0, nbContigs-1, scores, contigs);
 		}
 
-		/*
 		log.write("---- matrix of scores ----");
 		string out;
 		for(size_t i=0; i < nbContigs; i++){out += "\t" + to_string(i);}
@@ -184,7 +183,6 @@ int main(int argc, char* argv[]){
 			log.write(out);
 		}
 		log.write("---- end of matrix ----");
-		*/
 
 		//Merge best couples (when score >= requirement)
 		log.write("=== Merging best contigs couples ===");
