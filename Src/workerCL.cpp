@@ -7,11 +7,32 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cmath>
 
 #include "log.hpp"
 #include "reads.hpp"
 
 using namespace std;
+
+//This function return the gcd between 2 numbers
+size_t gcd(size_t a, size_t b){
+	//Using binary method (so can be heavily optimise)
+	//Note: the gcd() in algorithm std IS actually (05/2017) NOT official ! So It's not use here
+	//C++17 should include a gcd() function in <numeric>
+	size_t d = 0;
+	while(a%2==0 && b%2==0){
+		a=a/2;
+		b=b/2;
+		d++;
+	}
+	while(a!=b){
+		if(a%2==0){a=a/2;}
+		else if(b%2==0){b=b/2;}
+		else if(a>b){a=(a-b)/2;}
+		else{b=(b-a)/2;}
+	}
+	return a*pow(2,d);
+}
 
 WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
 	//Get the log output manager
@@ -126,13 +147,17 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	delete ultraSequence; //Clean  the memory
 	ultraSequence = nullptr;
 
-		//buffer for work items : they need 2 arrays for need2a and 2 array for each sequences. These arrays are of size of longuest contig.
+		//buffers for work items
 		/*
+			They need 1 array for need1a and 1 array for the one contig as the another one is only read once per work-item,
+			there is no necessity to copy it in local.
+			These arrays are of size of longuest contig.
 			Each work item need its own array (for each arrays) allocated on local.
 			So a local array (of a work group) contains all concatenated array of the work items of the same group.
 			This local array have a size of longuest_contig_size*work_group_size number of elements.
 		*/
-	m_log->write("Prepapre work-items buffers");
+	m_log->write("Prepare work-items buffers");
+	/*
 	txt = "itemBufferSize = "+to_string(longuest_contig_size);
 	m_log->write(txt);
 	txt = "workGroupSize = "+to_string(work_group_size);
@@ -147,11 +172,18 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	m_log->write(txt);
 	cl::Buffer buf_localInt (m_context, CL_MEM_READ_WRITE, bufSize);
 	m_kernel.setArg(5, buf_localChar);
+	*/
 
-
-	//Run the kernel and wait the end (global ids is 2D (2*contig id), local is 1D (work group item id)
+	//Run the kernel and wait the end (global ids (contig1_id, contig2_id) is 2D to 1D (nbContigs*nbContigs), local is 1D (work group item id)
+	//So contig2_id = global_id/nbContigs and contig1_id=global_id-contig2_id*nbContigs
 	m_log->write("Run kernel");
-	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbContigs, nbContigs), cl::NDRange(work_group_size), NULL, &ev);
+	size_t nbGlobalElem = nbContigs*nbContigs;
+	txt="global_nb_elems="+to_string(nbGlobalElem); m_log->write(txt);
+		//Important: the number of global ids MUST be a multiplicative of the number of local ids. So = greatest_common_divisor(global_ids,local_ids)
+	size_t nbLocalElem = gcd(nbGlobalElem, work_group_size);
+	txt="local_nb_elems="+to_string(nbLocalElem); m_log->write(txt);
+		//Launch kernel
+	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(work_group_size), NULL, &ev);
 	ev.wait();
 
 	//Get the score matrix: get the buffer into a 1D array then convert de 2D vectors array
@@ -166,7 +198,6 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	}
 
 	//TEST: display scores
-	/*
 	txt= "Seqs";
 	for(size_t i=0; i < nbContigs; i++){txt += "\t" + to_string(i);}
 	m_log->write(txt);
@@ -177,7 +208,6 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 		}
 		m_log->write(txt);
 	}
-	*/
 
 	//Clean the memory
 	delete scores_1D;
@@ -239,59 +269,48 @@ void WorkerCL::list_infos(Log& output){
 Les balises 'R"CLCODE(' et ')CLCODE'   (du type R"NAME( ... )NAME") servent à définir un
 string litéral brut. C'est utile pour avoir un string sur plusieurs ligne, comme un code,
 et cela évite d'avoir à ouvrir puis fermer les guillemets à chaque ligne.
+
+Reminder:
+	infos[0]: number of contigs
+	infos[1]: size of ultrasequence
+	infos[2]: size of longuest contig (so the size of a lot of elements of buffers arrays)
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq, local char *charbufloc, local long *intbufloc){
-		int seq1_id = get_global_id(0);
-		int seq2_id = get_global_id(1);
+	//kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq, local char *charbufloc, local long *intbufloc){
+	kernel void cmp_2_contigs(global unsigned long *infos, global char *scores, global unsigned long *seqs_sizes, global char *ultraseq){
+		int seq2_id = get_global_id(0)/infos[0];
+		int seq1_id = get_global_id(0) - seq2_id*infos[0];
 		int work_id = get_local_id(0);
 
-		/* Old way: basic memory. Work
-		//Get the position of the seqs in the ultraseq
-		unsigned long seq1_begin = 0;
-		unsigned long seq2_begin = 0;
-		unsigned long i=0;
-		while(i < seq1_id || i < seq2_id){
-			if(i < seq1_id){seq1_begin += seqs_sizes[i];}
-			if(i < seq2_id){seq2_begin += seqs_sizes[i];}
-			i++;
-		}
+		scores[seq1_id+infos[0]*seq2_id] = seq1_id*10+seq2_id;
 
-		//Get the sizes and the end pos of the seqs
+		/*
+
+		//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
+			//Get size
 		unsigned long seq1_size = seqs_sizes[seq1_id];
-		unsigned long seq2_size = seqs_sizes[seq2_id];
-		unsigned long seq1_end= seq1_begin + seq1_size - 1;
-		unsigned long seq2_end= seq2_begin + seq1_size - 1;
-
-		//Test if same seq : =1 else =0
-		scores[seq1_id + infos[0]*seq2_id] = 0;
-		if(seq1_size == seq2_size){
-			bool same = true;
-			for(unsigned int i=0; i < seq1_size; i++){
-				if(ultraseq[seq1_begin+i] != ultraseq[seq2_begin+i]){
-					same = false;
-					i = seq1_size;
-				}
-			}
-			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
-		}
-		*/
-
-		//Get the position of seqs and sizes
-		global char* seq1_ptr = NULL;
-		global char* seq2_ptr = NULL;
-			//Calculate the begin for each item (the for boucle is on all contigs (infos[0]) but it's stop before)
+			//Prepare the buffer to use
+		local char* seq1_ptr = &charbufloc[infos[2]*work_id];
+			//Calculate the begin for each item (the for boucle is on all contigs (infos[0]) but it's stop before (seq1_id < infos[0]))
 		unsigned long start = 0;
-		for(unsigned long i = 0; i < seq1_id; i++){start += seqs_sizes[i];}
-		seq1_ptr = &ultraseq[start];
+		for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
+			//Copy the contig sequence in local buffer (copy each char one by one from global to local)
+		for(unsigned long c=start; c < start+seq1_size; c++){
+			seq1_ptr[c-start] = ultraseq[c];
+		}
+
+		//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
+			//Get size
+		unsigned long seq2_size = seqs_sizes[seq2_id];
+			//Prepare the buffer to use
+		global char* seq2_ptr = NULL;
+			//Calculate the begin of this seq in ultraseq
 		start = 0;
 		for(unsigned long i = 0; i < seq2_id; i++){start += seqs_sizes[i];}
+			//Get seq
 		seq2_ptr = &ultraseq[start];
-			//get sizes
-		unsigned long seq1_size = seqs_sizes[seq1_id];
-		unsigned long seq2_size = seqs_sizes[seq2_id];
-			
+
 		//Test: if same seq then =1 else =0
 		scores[seq1_id + infos[0]*seq2_id] = 0;
 		if(seq1_size == seq2_size){
@@ -304,6 +323,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			}
 			if(same){scores[seq1_id+infos[0]*seq2_id]=1;}
 		}
+		*/
 
 	}
 )CLCODE";
