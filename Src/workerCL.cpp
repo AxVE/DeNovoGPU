@@ -62,7 +62,7 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
 WorkerCL::~WorkerCL(){
 }
 
-void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
+vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	/*
 	Create the string containing all contigs sequences
 	and store the list of contigs size (in same orders)
@@ -140,7 +140,7 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	m_log->write(txt);
 	txt = "workGroupSize = "+to_string(work_group_size);
 	m_log->write(txt);
-	size_t locSize = longuest_contig_size*work_group_size*sizeof(char);
+	size_t locSize = longuest_contig_size*work_group_size*sizeof(int8_t);
 	txt= "charBufferGroup = "+to_string(locSize)+"B";
 	m_log->write(txt);
 	m_kernel.setArg(4, locSize, NULL); //Declare only the space size so it can be on local
@@ -161,32 +161,23 @@ void WorkerCL::run(const Contigs& contigs, size_t work_group_size){
 	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(nbLocalElem), NULL, &ev);
 	ev.wait();
 
-	//Get the score matrix: get the buffer into a 1D array then convert de 2D vectors array
+	//Get the scores matrix: get the buffer into a 1D array then convert de 2D vectors array
 	m_log->write("Get scores matrix");
-	char* scores_1D = new char[nbContigs*nbContigs];
+	int8_t* scores_1D = new int8_t[nbContigs*nbContigs];
 	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
-	vector< vector<char> > scores = vector< vector<char> >(nbContigs, vector<char>(nbContigs, 0));
+	vector< vector<int8_t> > scores = vector< vector<int8_t> >(nbContigs, vector<int8_t>(nbContigs, 0));
 	for(size_t j=0; j<nbContigs; j++){
 		for(size_t i=0; i<nbContigs; i++){
 			scores[i][j] = scores_1D[i+nbContigs*j];
 		}
 	}
 
-	//TEST: display scores
-	txt= "Seqs";
-	for(size_t i=0; i < nbContigs; i++){txt += "\t" + to_string(i);}
-	m_log->write(txt);
-	for(size_t j=0; j < nbContigs; j++){
-		txt = to_string(j);
-		for(size_t i=0; i < nbContigs; i++){
-			txt += "\t"+to_string(scores[i][j]);
-		}
-		m_log->write(txt);
-	}
-
 	//Clean the memory
 	delete scores_1D;
 	scores_1D = nullptr;
+
+	//Return the scores matrix
+	return scores;
 }
 
 void WorkerCL::list_infos(Log& output){

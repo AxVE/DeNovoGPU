@@ -14,7 +14,7 @@ class WorkerCL {
 		~WorkerCL();
 
 		//Return the matrix of coupling scores of a contigs set
-		void run(const Contigs& contigs, size_t work_group_size=1);
+		std::vector< std::vector<int8_t> > run(const Contigs& contigs, size_t work_group_size=1);
 		
 		static void list_infos(Log& output);
 
