@@ -243,8 +243,8 @@ Reminder:
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	//This function return the match score of seq2 on seq1
-	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size){
+	//This function return the match score of seq2 on seq1. The local array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
+	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, local long *intarray){
 		//Test: if same seq then =1 else =0
 		if(seq1_size == seq2_size){
 			bool same=true;
@@ -292,6 +292,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		local long *inta = &intbufloc[infos[2]*work_id];
 
 		//Get match score of seq2 on seq1
-		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size);
+		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
 	}
 )CLCODE";
