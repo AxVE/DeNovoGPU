@@ -243,6 +243,22 @@ Reminder:
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
+	//This function return the match score of seq2 on seq1
+	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size){
+		//Test: if same seq then =1 else =0
+		if(seq1_size == seq2_size){
+			bool same=true;
+			for(unsigned int i=0; i < seq1_size; i++){
+				if(seq1[i] != seq2[i]){
+					same = false;
+					i = seq1_size;
+				}
+			}
+			if(same){return 1;}
+		}
+		return 0;
+	}
+
 	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __local long *intbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
@@ -273,19 +289,9 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		global char* seq2 = &ultraseq[start];
 
 		//Get the local int array buffer
-		//local long *inta = &intbufloc[infos[2]*work_id];
+		local long *inta = &intbufloc[infos[2]*work_id];
 
-		//Test: if same seq then =1 else =0
-		scores[seq1_id + nbContigs*seq2_id] = 0;
-		if(seq1_size == seq2_size){
-			bool same=true;
-			for(unsigned int i=0; i < seq1_size; i++){
-				if(seq1[i] != seq2[i]){
-					same = false;
-					i = seq1_size;
-				}
-			}
-			if(same){scores[seq1_id+nbContigs*seq2_id]=1;}
-		}
+		//Get match score of seq2 on seq1
+		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size);
 	}
 )CLCODE";
