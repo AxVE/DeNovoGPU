@@ -92,6 +92,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	*/
 
 	string txt = ""; //Used to create then output messages
+	cl_int state; // Used to get the return of CL commands and errors
 	size_t buf_size=0; //Usr to calculate each buffer mem size
 	size_t bufferGlobalUsage = 0; //Use to know the total of buffer usage
 	size_t bufferLocalUsage = 0; //Use to know the total of buffer usage
@@ -130,7 +131,12 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	m_log->write(txt);
 	uint64_t infos[3] = {nbContigs, ultraSequenceSize, longuest_contig_size};
 	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, buf_size);
-	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, buf_size, &infos);
+	state = m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, buf_size, &infos);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while writing infos buffer ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 	m_kernel.setArg(0, buf_infos); //update kernel
 	bufferGlobalUsage += buf_size;
 
@@ -142,7 +148,12 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	m_log->write(txt);
 	size_t scores_size = buf_size;
 	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, buf_size);
-	m_kernel.setArg(1, buf_scores);
+	state = m_kernel.setArg(1, buf_scores);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error setting arg 1 infos ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 	bufferGlobalUsage += buf_size;
 
 		//sequences sizes (array of 64bits) buffer
@@ -151,8 +162,18 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	txt = "contigsSizesBuf = "+to_string(buf_size)+"B";
 	m_log->write(txt);
 	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, buf_size);
-	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, buf_size, &contigs_size[0]);
-	m_kernel.setArg(2, buf_sizes);
+	state = m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, buf_size, &contigs_size[0]);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while writing sequences_sizes buffer ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+	state = m_kernel.setArg(2, buf_sizes);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error setting arg 2 sequences_sizes ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 	bufferGlobalUsage += buf_size;
 
 		//ultrasequence, get each contigs sequence and add it in ultrasequence
@@ -170,8 +191,18 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		}
 	}
 	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, buf_size);
-	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, buf_size, ultraSequence);
-	m_kernel.setArg(3, buf_ultraseq);
+	state = m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, buf_size, ultraSequence);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while writing ultrasequence buffer ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+	state = m_kernel.setArg(3, buf_ultraseq);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error setting arg 3 ultraseq ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 	bufferGlobalUsage += buf_size;
 
 	delete ultraSequence; //Clean  the memory
@@ -193,7 +224,12 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	buf_size = longuest_contig_size*work_group_size*sizeof(cl_char);
 	txt= "charBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
-	m_kernel.setArg(4, buf_size, NULL); //Declare only the space size so it can be on local
+	state = m_kernel.setArg(4, buf_size, NULL); //Declare only the space size so it can be on local
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error setting arg 4 local_char_array ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 	bufferLocalUsage += buf_size;
 
 		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
@@ -203,8 +239,18 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	cl::Buffer buf_intarray (m_context, CL_MEM_READ_WRITE, buf_size);
 	cl_long* intarray = new cl_long[longuest_contig_size*nbGlobalElem];
 	for(size_t i=0; i < longuest_contig_size*nbGlobalElem; i++){intarray[i]=0;}
-	m_commandqueue.enqueueWriteBuffer(buf_intarray, CL_TRUE, 0, buf_size, intarray);
-	m_kernel.setArg(5, buf_intarray);
+	state = m_commandqueue.enqueueWriteBuffer(buf_intarray, CL_TRUE, 0, buf_size, intarray);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while writing intarray buffer ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+	state = m_kernel.setArg(5, buf_intarray);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error setting arg 5 intarray ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 	bufferGlobalUsage += buf_size;
 
 	//Memory usage from buffer
@@ -221,12 +267,24 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	//So contig2_id = global_id/nbContigs and contig1_id=global_id-contig2_id*nbContigs
 	m_log->write("Run kernel");
 		//Launch kernel
-	m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(work_group_size), NULL, &ev);
+	state = m_commandqueue.enqueueNDRangeKernel(m_kernel,cl::NullRange, cl::NDRange(nbGlobalElem), cl::NDRange(work_group_size), NULL, &ev);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while setting global and local ranges ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+
 	ev.wait();
 
 	//Get the scores matrix: get the buffer into a 1D array then convert de 2D vectors array
 	int8_t* scores_1D = new int8_t[nbGlobalElem];
-	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
+	state = m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while reading scores buffer ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+
 	vector< vector<int8_t> > scores = vector< vector<int8_t> >(nbContigs, vector<int8_t>(nbContigs, 0));
 	for(size_t j=0; j<nbContigs; j++){
 		for(size_t i=0; i<nbContigs; i++){
@@ -305,18 +363,51 @@ Reminder:
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
-	//This function return the match score of seq2 on seq1. The local array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
+	//This function return the match score of seq2 on seq1. The array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
 	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global long *intarray){
-		//Test: if same seq then =1 else =-pos_of_diff
-		size_t min_size = (seq1_size < seq2_size)?seq1_size:seq2_size;
-		for(size_t i=0; i < min_size; i++){
-			if(seq1[i] != seq2[i]){
-				intarray[i] = -i;
-				return -i;
-			}
+		/*
+		 * Using the need1a algorithm (needleman but with only a 1D int array of seq1 size instead of a 2D array (seq1*seq2 sizes))
+		*/
+		long best=0; //Use to find the best score
+		long previous_align_score = 0;//Use to keep in memory the previous "(mis)match" score
+		//Doing first char of seq2 (can start everywhere in seq1)
+		for(size_t i=0; i < seq1_size; i++){
+			if(seq1[i]==seq2[0]){intarray[i]=1;}
+			else{intarray[i]=0;}
 		}
-		return 1;
+		//if(best < intarray[seq1_size-1]){best=intarray[seq1_size-1];}
+		best = intarray[seq1_size-1];
+		//Doing the rest of seq2
+		for(size_t j=1; j < seq2_size; j++){
+			previous_align_score = intarray[0];
 
+			//Against first char of seq1: is an indel so it's previous -1
+			intarray[0] = intarray[0]-1;
+			
+			//Do others nucs
+			for(size_t i=1; i < seq1_size; i++){
+				//best score with (mis)match or indel ?
+				long s = previous_align_score + (seq1[i]==seq2[j])?1:-1;
+				if(s < intarray[i-1]){s = intarray[i-1]-1;}
+				if(s < intarray[i]){s = intarray[i]-1;}
+				//Get 'current' align score
+				previous_align_score = intarray[i];
+				//Put new score
+				intarray[i] = s;
+			}
+
+			//Is it the best align ?
+			if(intarray[seq1_size-1]>best){best=intarray[seq1_size-1];}
+		}
+
+		//Check best case is not when seq2 is inside seq1 (intarray is now with the last nuc of seq2)
+		for(size_t i=0; i < seq1_size; i ++){
+			if(intarray[i] > best){best = intarray[i];}
+		}
+	
+		//Send best score in %
+		unsigned long min_size = (seq1_size < seq2_size)?seq1_size:seq2_size;
+		return 100*best/min_size;
 	}
 
 	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global long *intbufloc){
