@@ -369,7 +369,8 @@ Reminder:
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//This function return the match score of seq2 on seq1. The array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
-	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
+	//long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
+	long score_2_seq(global char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
 		/*
 		 * Using the need1a algorithm (needleman but with only a 1D int array of seq1 size instead of a 2D array (seq1*seq2 sizes))
 		*/
@@ -415,7 +416,8 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		return 100*best/min_size;
 	}
 
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc, __local char *charbufloc){
+	//kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc, __local char *charbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
@@ -425,6 +427,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
 			//Get size
 		unsigned long seq1_size = seqs_sizes[seq1_id];
+		/*
 			//Prepare the buffer to use
 		local char* seq1 = &charbufloc[infos[2]*work_id];
 			//Get the position of the first sequence inside ultraseq
@@ -434,6 +437,12 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		for(unsigned long c=0; c < seq1_size; c++){
 			seq1[c] = ultraseq[start+c];
 		}
+		*/
+			//Calculat the begin of this seq in ultraseq
+		start = 0;
+		for(unsigned long i=°; i < seq1_id; i++){start += seqs_sizes[i];}
+			//get seq
+		global char* seq1 = &ultraseq[start];
 		
 		unsigned long seq1_start = start; //DEBUG
 
