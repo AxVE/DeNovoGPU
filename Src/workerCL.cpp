@@ -166,7 +166,6 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	ev.wait();
 
 	//Get the scores matrix: get the buffer into a 1D array then convert de 2D vectors array
-	m_log->write("Get scores matrix");
 	int8_t* scores_1D = new int8_t[nbGlobalElem];
 	m_commandqueue.enqueueReadBuffer(buf_scores, CL_TRUE, 0, scores_size, scores_1D);
 	vector< vector<int8_t> > scores = vector< vector<int8_t> >(nbContigs, vector<int8_t>(nbContigs, 0));
@@ -184,7 +183,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	ultraSequence = new cl_char[ultraSequenceSize];
 	m_commandqueue.enqueueReadBuffer(buf_ultraseq, CL_TRUE, 0, ultraSequenceSize, ultraSequence);
 	txt = "utlraseq_after = ";
-	for(size_t i=0; i < ultraSequenceSize; i++){txt += to_string(ultraSequence[i]);}
+	for(size_t i=0; i < ultraSequenceSize; i++){txt += to_string(ultraSequence[i])+"|";}
 	m_log->write(txt);
 	delete ultraSequence;
 	ultraSequence = nullptr;
@@ -293,17 +292,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		}
 		
 		unsigned long seq1_start = start; //DEBUG
-		//Test
-		bool diff = false;
-		for(unsigned long i=0; i < seq1_size; i++){
-			//if(ultraseq[seq1_start+i] != seq2[i]){ //DEBUG -> works
-			if(seq1[i] != ultraseq[seq1_start+i]){
-				i = seq1_size;
-				diff = true;
-			}
-		}
-		if(diff){scores[seq1_id+nbContigs*seq2_id]=42;}
-		else{scores[seq1_id+nbContigs*seq2_id]=0;}
 
 		//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
 			//Get size
@@ -315,6 +303,28 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		global char* seq2 = &ultraseq[start];
 		
 		unsigned long seq2_start = start; //DEBUG
+
+		//Test
+		if(seq1_size != seq2_size){scores[gid]=-42;}
+		else{
+			for(size_t i=0; i < seq1_size; i++){
+				//if(ultraseq[seq1_start+i] != seq2[i]){ //DEBUG -> works
+				if(seq1[i] != seq2[i]){
+					scores[gid]=-i;
+					i = seq1_size;
+				}
+				else if (i == seq1_size-1){scores[gid]=1;}
+			}
+		}
+		/*
+		for(size_t i=0; i < seq1_size; i++){
+			if(seq1[i] != ultraseq[seq2_start+i]){
+				scores[gid]=-i;
+				i = seq1_size;
+			}
+			else if(i == seq1_size-1){scores[gid]=1;}
+		}
+		*/
 
 		//Get the local int array buffer
 		local long *inta = &intbufloc[infos[2]*work_id];
