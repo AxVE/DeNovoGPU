@@ -15,7 +15,8 @@ using namespace std;
 
 WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
 	//Get the log output manager
-	m_log = &log;	
+	m_log = &log;
+	string txt;
 
 	/* GPU environment preparation */
 	
@@ -38,6 +39,20 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
 		throw(error);
 	}
 	m_device = devices[device_id];
+
+	//Get device infos
+	m_device_name = m_device.getInfo<CL_DEVICE_NAME>();
+	txt = "gpu_name = "+m_device_name;
+	m_log->write(txt);
+	m_device_global_bytes = m_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+	txt = "gpu_global_mem_size = "+to_string(m_device_global_bytes)+"B";
+	m_log->write(txt);
+	m_device_local_bytes = m_device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+	txt = "gpu_local_mem_size = "+to_string(m_device_local_bytes)+"B";
+	m_log->write(txt);
+	m_device_max_workgroupsize = m_device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+	txt = "gpu_max_workgroup_size = "+to_string(m_device_max_workgroupsize);
+	m_log->write(txt);
 
 	//Create context
 	m_context = cl::Context({m_device});
@@ -71,6 +86,9 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	*/
 
 	string txt = ""; //Used to create then output messages
+	size_t buf_size=0; //Usr to calculate each buffer mem size
+	size_t bufferGlobalUsage = 0; //Use to know the total of buffer usage
+	size_t bufferLocalUsage = 0; //Use to know the total of buffer usage
 
 	//Get list of contigs size, the total length of the
 	//contigs concatenation and the longuest contig size
@@ -101,27 +119,40 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		//infos buffer (64bits): number of contigs, size of the ultrasequence, size of longuest contig
 		//buffer only accepts non-dynamics arrays (even of size 1)
 	m_log->write("Prepare infos buffer");
+	buf_size = sizeof(uint64_t)*3;
+	txt = "infosBuf = "+to_string(buf_size)+"B";
+	m_log->write(txt);
 	uint64_t infos[3] = {nbContigs, ultraSequenceSize, longuest_contig_size};
-	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t));
-	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, sizeof(uint64_t), &infos);
+	cl::Buffer buf_infos (m_context, CL_MEM_READ_ONLY, buf_size);
+	m_commandqueue.enqueueWriteBuffer(buf_infos, CL_TRUE, 0, buf_size, &infos);
 	m_kernel.setArg(0, buf_infos); //update kernel
+	bufferGlobalUsage += buf_size;
 
 		//Prepare the buffer for the results matrix (it will be 1D so an id of {x,y} is id=x+y*x_size)
 		//The size of the buffer = char * x_size * y_size. Note: x_size == y_size == nb_contigs
 	m_log->write("Prepare scores matrix buffer");
-	unsigned int scores_size = sizeof(char)*nbGlobalElem;
-	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, scores_size);
+	buf_size = sizeof(char)*nbGlobalElem;
+	txt = "matrixScoresBuf = "+to_string(buf_size)+"B";
+	m_log->write(txt);
+	size_t scores_size = buf_size;
+	cl::Buffer buf_scores (m_context, CL_MEM_WRITE_ONLY, buf_size);
 	m_kernel.setArg(1, buf_scores);
+	bufferGlobalUsage += buf_size;
 
 		//sequences sizes (array of 64bits) buffer
 	m_log->write("Prepare contigs sizes buffer");
-	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, sizeof(uint64_t)*nbContigs);
-	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, sizeof(uint64_t)*nbContigs, &contigs_size[0]);
+	buf_size = sizeof(uint64_t)*nbContigs;
+	txt = "contigsSizesBuf = "+to_string(buf_size)+"B";
+	m_log->write(txt);
+	cl::Buffer buf_sizes (m_context, CL_MEM_READ_ONLY, buf_size);
+	m_commandqueue.enqueueWriteBuffer(buf_sizes, CL_TRUE, 0, buf_size, &contigs_size[0]);
 	m_kernel.setArg(2, buf_sizes);
+	bufferGlobalUsage += buf_size;
 
 		//ultrasequence, get each contigs sequence and add it in ultrasequence
 	m_log->write("Prepare ultraSequence buffer");
-	txt = "ultraSeqSize = "+to_string(ultraSequenceSize*sizeof(cl_char))+"B";
+	buf_size = sizeof(cl_char)*ultraSequenceSize;
+	txt = "ultraSeqSize = "+to_string(buf_size)+"B";
 	m_log->write(txt);
 	cl_char* ultraSequence = new cl_char[ultraSequenceSize];
 	uint64_t i = 0;
@@ -132,9 +163,10 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 				i++;
 		}
 	}
-	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, sizeof(cl_char)*ultraSequenceSize);
-	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, sizeof(cl_char)*ultraSequenceSize, ultraSequence);
+	cl::Buffer buf_ultraseq (m_context, CL_MEM_READ_ONLY, buf_size);
+	m_commandqueue.enqueueWriteBuffer(buf_ultraseq, CL_TRUE, 0, buf_size, ultraSequence);
 	m_kernel.setArg(3, buf_ultraseq);
+	bufferGlobalUsage += buf_size;
 
 	delete ultraSequence; //Clean  the memory
 	ultraSequence = nullptr;
@@ -149,14 +181,26 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 			This local array have a size of longuest_contig_size*work_group_size number of elements.
 		*/
 	m_log->write("Prepare work-items buffers");
-	size_t locSize = longuest_contig_size*work_group_size*sizeof(cl_char);
-	txt= "charBufferGroup = "+to_string(locSize)+"B";
+	buf_size = longuest_contig_size*work_group_size*sizeof(cl_char);
+	txt= "charBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
-	m_kernel.setArg(4, locSize, NULL); //Declare only the space size so it can be on local
-	locSize = longuest_contig_size*work_group_size*sizeof(cl_long);
-	txt= "intBufferGroup = "+to_string(locSize)+"B";
+	m_kernel.setArg(4, buf_size, NULL); //Declare only the space size so it can be on local
+	bufferLocalUsage += buf_size;
+	buf_size = longuest_contig_size*work_group_size*sizeof(cl_long);
+	txt= "intBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
-	m_kernel.setArg(5, locSize, NULL); //Declare only the space size so it can be on local
+	m_kernel.setArg(5, buf_size, NULL); //Declare only the space size so it can be on local
+	bufferLocalUsage += buf_size;
+
+	//Memory usage from buffer
+	txt = "buffer_global_usage = "+to_string(bufferGlobalUsage)+"B";
+	m_log->write(txt);
+	txt = "buffer_global_percent = "+to_string(100*bufferGlobalUsage/m_device_global_bytes)+"%";
+	m_log->write(txt);
+	txt = "buffer_local_usage = "+to_string(bufferLocalUsage)+"B";
+	m_log->write(txt);
+	txt = "buffer_local_percent = "+to_string(100*bufferLocalUsage/m_device_local_bytes)+"%";
+	m_log->write(txt);
 
 	//Run the kernel and wait the end (global ids (contig1_id, contig2_id) is 2D to 1D (nbContigs*nbContigs), local is 1D (work group item id)
 	//So contig2_id = global_id/nbContigs and contig1_id=global_id-contig2_id*nbContigs
@@ -178,15 +222,6 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	//Clean the memory
 	delete scores_1D;
 	scores_1D = nullptr;
-
-	//Test ultraseq
-	ultraSequence = new cl_char[ultraSequenceSize];
-	m_commandqueue.enqueueReadBuffer(buf_ultraseq, CL_TRUE, 0, ultraSequenceSize, ultraSequence);
-	txt = "utlraseq_after = ";
-	for(size_t i=0; i < ultraSequenceSize; i++){txt += to_string(ultraSequence[i])+"|";}
-	m_log->write(txt);
-	delete ultraSequence;
-	ultraSequence = nullptr;
 
 	//Return the scores matrix
 	return scores;
@@ -260,15 +295,18 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		//Test: if same seq then =1 else =0
 		if(seq1_size == seq2_size){
 			bool same=true;
-			for(unsigned int i=0; i < seq1_size; i++){
+			for(size_t i=0; i < seq1_size; i++){
 				if(seq1[i] != seq2[i]){
+					intarray[0]=i;
 					same = false;
+					return -i;
 					i = seq1_size;
 				}
 			}
 			if(same){return 1;}
 		}
 		return 0;
+
 	}
 
 	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __local long *intbufloc){
@@ -305,6 +343,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		unsigned long seq2_start = start; //DEBUG
 
 		//Test
+		/*
 		if(seq1_size != seq2_size){scores[gid]=-42;}
 		else{
 			for(size_t i=0; i < seq1_size; i++){
@@ -316,20 +355,12 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 				else if (i == seq1_size-1){scores[gid]=1;}
 			}
 		}
-		/*
-		for(size_t i=0; i < seq1_size; i++){
-			if(seq1[i] != ultraseq[seq2_start+i]){
-				scores[gid]=-i;
-				i = seq1_size;
-			}
-			else if(i == seq1_size-1){scores[gid]=1;}
-		}
 		*/
 
 		//Get the local int array buffer
 		local long *inta = &intbufloc[infos[2]*work_id];
 
 		//Get match score of seq2 on seq1
-		//scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
 	}
 )CLCODE";
