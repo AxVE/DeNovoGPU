@@ -395,7 +395,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			//Do others nucs
 			for(size_t i=1; i < seq1_size; i++){
 				//best score with (mis)match or indel ?
-				long s = previous_align_score + (seq1[i]==seq2[j])?1:-1;
+				long s = previous_align_score + ((seq1[i]==seq2[j])?1:-1);
 				if(s < intarray[i-1]){s = intarray[i-1]-1;}
 				if(s < intarray[i]){s = intarray[i]-1;}
 				//Get 'current' align score
@@ -426,44 +426,50 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		size_t work_id = get_local_id(0);
 		unsigned long nbContigs = infos[0];
 
-		//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
-			//Get size
-		unsigned long seq1_size = seqs_sizes[seq1_id];
-		/*
-			//Prepare the buffer to use
-		local char* seq1 = &charbufloc[infos[2]*work_id];
-			//Get the position of the first sequence inside ultraseq
-		unsigned long start = 0;
-		for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
-			//Copy the contig sequence in local buffer (copy each char one by one from global to local)
-		for(unsigned long c=0; c < seq1_size; c++){
-			seq1[c] = ultraseq[start+c];
+		//Only calculate score if it's not the same sequence
+		if(seq1_id != seq2_id){
+			//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
+				//Get size
+			unsigned long seq1_size = seqs_sizes[seq1_id];
+			/*
+				//Prepare the buffer to use
+			local char* seq1 = &charbufloc[infos[2]*work_id];
+				//Get the position of the first sequence inside ultraseq
+			unsigned long start = 0;
+			for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
+				//Copy the contig sequence in local buffer (copy each char one by one from global to local)
+			for(unsigned long c=0; c < seq1_size; c++){
+				seq1[c] = ultraseq[start+c];
+			}
+			*/
+				//Calculate the begin of this seq in ultraseq
+			unsigned long start = 0;
+			for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
+				//get seq
+			global char* seq1 = &ultraseq[start];
+			
+			unsigned long seq1_start = start; //DEBUG
+
+			//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
+				//Get size
+			unsigned long seq2_size = seqs_sizes[seq2_id];
+				//Calculate the begin of this seq in ultraseq
+			start = 0;
+			for(unsigned long i=0; i < seq2_id; i++){start += seqs_sizes[i];}
+				//Get seq
+			global char* seq2 = &ultraseq[start];
+			
+			unsigned long seq2_start = start; //DEBUG
+
+			//Get the global int array buffer (it's an array of nbElem*longuestContig of long),
+			//so the sub_array to this work item is at the position longuestContig*global_id
+			global long *inta = &intbufloc[infos[2]*gid];
+
+			//Get match score of seq2 on seq1
+			scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
 		}
-		*/
-			//Calculat the begin of this seq in ultraseq
-		unsigned long start = 0;
-		for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
-			//get seq
-		global char* seq1 = &ultraseq[start];
-		
-		unsigned long seq1_start = start; //DEBUG
-
-		//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
-			//Get size
-		unsigned long seq2_size = seqs_sizes[seq2_id];
-			//Calculate the begin of this seq in ultraseq
-		start = 0;
-		for(unsigned long i=0; i < seq2_id; i++){start += seqs_sizes[i];}
-			//Get seq
-		global char* seq2 = &ultraseq[start];
-		
-		unsigned long seq2_start = start; //DEBUG
-
-		//Get the global int array buffer (it's an array of nbElem*longuestContig of long),
-		//so the sub_array to this work item is at the position longuestContig*global_id
-		global long *inta = &intbufloc[infos[2]*gid];
-
-		//Get match score of seq2 on seq1
-		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+		else{ //same sequences
+			scores[seq1_id+nbContigs*seq2_id]=0;
+		}
 	}
 )CLCODE";
