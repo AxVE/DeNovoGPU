@@ -76,6 +76,7 @@ int main(int argc, char* argv[]){
 	}
 	catch(string opencl_err){
 		log.write(opencl_err);
+		return 1;
 	}
 
 	/* Data gathering :
@@ -129,7 +130,13 @@ int main(int argc, char* argv[]){
 		
 			// GPU ?
 		if(params.gpu){
-			scores = workerCL->run(contigs, params.opencl_work_group_size);
+			try{
+				scores = workerCL->run(contigs, params.opencl_work_group_size);
+			}
+			catch(string opencl_err){
+				log.write(opencl_err);
+				return 1;
+			}
 		}
 			// Multithreading ?
 		else if(params.nbthreads > 1){
