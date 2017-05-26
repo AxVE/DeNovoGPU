@@ -110,7 +110,7 @@ int main(int argc, char* argv[]){
 	while(in_progress){
 		cycles++;
 		{
-			string s = "===== Cycle "+to_string(cycles)+" =====";
+			string s = "===== Cycle "+to_string(cycles)+" start =====";
 			log.write(s);
 			log.write( "=== Calculate score between each contig ===" );
 		}
@@ -260,7 +260,7 @@ int main(int argc, char* argv[]){
 		log.write(s);
 
 		//End of cycle
-		log.write("===== Cycle end =====\n");
+		log.write("===== Cycle "+to_string(cycles)+" end =====\n");
 	}
 
 	//Free workerCL (if created)
