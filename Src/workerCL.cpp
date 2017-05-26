@@ -209,6 +209,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	ultraSequence = nullptr;
 
 		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
+	m_log->write("Prepare work-items buffers");
 	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_short);
 	txt= "intBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
@@ -240,8 +241,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 			The localisation (global or local) of buffer with NULL value is decided by the kernel parameter
 			('global long* intarray' or 'local long* intarray').
 		*/
-	/*
-	m_log->write("Prepare work-items buffers");
+	m_log->write("Prepare work-items local buffers");
 	buf_size = longuest_contig_size*work_group_size*sizeof(cl_char);
 	txt= "charBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
@@ -252,8 +252,6 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		throw(txt);
 	}
 	bufferLocalUsage += buf_size;
-	*/
-
 
 	//Memory usage from buffer
 	txt = "buffer_global_usage = "+to_string(bufferGlobalUsage)+"B";
@@ -371,8 +369,7 @@ Reminder:
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//This function return the match score of seq2 on seq1. The array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
-	//long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
-	long score_2_seq(global char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
+	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
 		/*
 		 * Using the need1a algorithm (needleman but with only a 1D int array of seq1 size instead of a 2D array (seq1*seq2 sizes))
 		*/
@@ -418,8 +415,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		return 100*best/min_size;
 	}
 
-	//kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc, __local char *charbufloc){
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc, __local char *charbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
@@ -431,7 +427,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			//Get the first contig sequence and its infos. As it will be read multiple times, copy it in local-item buffer
 				//Get size
 			unsigned long seq1_size = seqs_sizes[seq1_id];
-			/*
 				//Prepare the buffer to use
 			local char* seq1 = &charbufloc[infos[2]*work_id];
 				//Get the position of the first sequence inside ultraseq
@@ -441,14 +436,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			for(unsigned long c=0; c < seq1_size; c++){
 				seq1[c] = ultraseq[start+c];
 			}
-			*/
-				//Calculate the begin of this seq in ultraseq
-			unsigned long start = 0;
-			for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
-				//get seq
-			global char* seq1 = &ultraseq[start];
-			
-			unsigned long seq1_start = start; //DEBUG
 
 			//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
 				//Get size
@@ -459,8 +446,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 				//Get seq
 			global char* seq2 = &ultraseq[start];
 			
-			unsigned long seq2_start = start; //DEBUG
-
 			//Get the global int array buffer (it's an array of nbElem*longuestContig of long),
 			//so the sub_array to this work item is at the position longuestContig*global_id
 			global long *inta = &intbufloc[infos[2]*gid];
