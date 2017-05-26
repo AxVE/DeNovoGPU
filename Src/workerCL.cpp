@@ -208,6 +208,18 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	delete ultraSequence; //Clean  the memory
 	ultraSequence = nullptr;
 
+		//buffers for work items
+		/*
+			They need 1 array for need1a and 1 array for the one contig as the another one is only read once per work-item,
+			there is no necessity to copy it in local.
+			These arrays are of size of longuest contig.
+			Each work item need its own array (for each arrays) allocated on local.
+			So a local array (of a work group) contains all concatenated array of the work items of the same group.
+			This local array have a size of longuest_contig_size*work_group_size number of elements.
+
+			The localisation (global or local) of buffer with NULL value is decided by the kernel parameter
+			('global long* intarray' or 'local long* intarray').
+		*/
 		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
 	m_log->write("Prepare work-items buffers");
 	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_short);
@@ -229,20 +241,10 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		throw(txt);
 	}
 	bufferGlobalUsage += buf_size;
-		//buffers for work items
-		/*
-			They need 1 array for need1a and 1 array for the one contig as the another one is only read once per work-item,
-			there is no necessity to copy it in local.
-			These arrays are of size of longuest contig.
-			Each work item need its own array (for each arrays) allocated on local.
-			So a local array (of a work group) contains all concatenated array of the work items of the same group.
-			This local array have a size of longuest_contig_size*work_group_size number of elements.
 
-			The localisation (global or local) of buffer with NULL value is decided by the kernel parameter
-			('global long* intarray' or 'local long* intarray').
-		*/
+		//The sequence are copy on local array. Each work item need 2 array (the 2 sequences)
 	m_log->write("Prepare work-items local buffers");
-	buf_size = longuest_contig_size*work_group_size*sizeof(cl_char);
+	buf_size = 2*longuest_contig_size*work_group_size*sizeof(cl_char);
 	txt= "charBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
 	state = m_kernel.setArg(5, buf_size, NULL); //Declare only the space size so it can be on local
@@ -368,8 +370,35 @@ Reminder:
 */
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
+	#define BASE_A 65
+	#define BASE_T 84
+	#define BASE_G 71
+	#define BASE_C 67
+	#define BASE_N 78
+	
+	//This function return the complet of a given char
+	char complement(char c){
+		switch(c){
+			case BASE_A:
+				c = BASE_T;
+				break;
+			case BASE_T:
+				c = BASE_A;
+				break;
+			case BASE_G:
+				c = BASE_C;
+				break;
+			case BASE_C:
+				c = BASE_G;
+				break;
+			default:
+				c = BASE_N;
+		}
+		return c;
+	}
+
 	//This function return the match score of seq2 on seq1. The array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
-	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
+	long score_2_seq(local char *seq1, unsigned long seq1_size, local char *seq2, unsigned long seq2_size, global short *intarray){
 		/*
 		 * Using the need1a algorithm (needleman but with only a 1D int array of seq1 size instead of a 2D array (seq1*seq2 sizes))
 		*/
@@ -380,7 +409,6 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			if(seq1[i]==seq2[0]){intarray[i]=1;}
 			else{intarray[i]=0;}
 		}
-		//if(best < intarray[seq1_size-1]){best=intarray[seq1_size-1];}
 		best = intarray[seq1_size-1];
 		//Doing the rest of seq2
 		for(size_t j=1; j < seq2_size; j++){
@@ -415,7 +443,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		return 100*best/min_size;
 	}
 
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc, __local char *charbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __global short *intbufloc, __local char *charbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
@@ -428,7 +456,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 				//Get size
 			unsigned long seq1_size = seqs_sizes[seq1_id];
 				//Prepare the buffer to use
-			local char* seq1 = &charbufloc[infos[2]*work_id];
+			local char* seq1 = &charbufloc[infos[2]*work_id*2];
 				//Get the position of the first sequence inside ultraseq
 			unsigned long start = 0;
 			for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
@@ -437,21 +465,38 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 				seq1[c] = ultraseq[start+c];
 			}
 
-			//Get the second contig sequence and its infos. It is read only once, so there is no need to copy it in local.
+			//Get the second contig sequence and its infos. As it will be reversed-complement, copy it in local-item-2 buffer
 				//Get size
 			unsigned long seq2_size = seqs_sizes[seq2_id];
-				//Calculate the begin of this seq in ultraseq
+				//Prepare the buffer to use
+			local char* seq2 = &charbufloc[infos[2]*work_id*2+infos[2]];
+				//Get the position of the first sequence inside ultraseq
 			start = 0;
 			for(unsigned long i=0; i < seq2_id; i++){start += seqs_sizes[i];}
-				//Get seq
-			global char* seq2 = &ultraseq[start];
+				//Copy the contig sequence in local buffer (copy each char one by one from global to local)
+			for(unsigned long c=0; c < seq2_size; c++){
+				seq2[c] = ultraseq[start+c];
+			}
 			
 			//Get the global int array buffer (it's an array of nbElem*longuestContig of long),
 			//so the sub_array to this work item is at the position longuestContig*global_id
 			global long *inta = &intbufloc[infos[2]*gid];
 
 			//Get match score of seq2 on seq1
-			scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+			//scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+				//normal
+			char s_normal = score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+				//reverse-complement
+			for(size_t i=0; i < seq2_size/2; i++){
+				char c = complement(seq2[i]);
+				seq2[i] = complement(seq2[seq2_size-1-i]);
+				seq2[i] = c;
+			}
+				//Don't forget the middle nuc if seq2_size is odd
+			if(seq2_size%2){seq2[seq2_size/2]=complement[seq2_size/2];}
+				//get score with reverse complement
+			char s_reverse = score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+
 		}
 		else{ //same sequences
 			scores[seq1_id+nbContigs*seq2_id]=0;
