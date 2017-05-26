@@ -274,7 +274,12 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		throw(txt);
 	}
 
-	ev.wait();
+	state = ev.wait();
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while running kernel ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
 
 	//Get the scores matrix: get the buffer into a 1D array then convert de 2D vectors array
 	int8_t* scores_1D = new int8_t[nbGlobalElem];
