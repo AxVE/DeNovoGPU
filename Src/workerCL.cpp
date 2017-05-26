@@ -41,14 +41,20 @@ WorkerCL::WorkerCL(size_t platform_id, size_t device_id, Log& log){
 	m_device = devices[device_id];
 
 	//Get device infos
+		//name
 	m_device_name = m_device.getInfo<CL_DEVICE_NAME>();
 	txt = "gpu_name = "+m_device_name;
 	m_log->write(txt);
+		//global and local memory size
 	m_device_global_bytes = m_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
 	txt = "gpu_global_mem_size = "+to_string(m_device_global_bytes)+"B";
 	m_log->write(txt);
 	m_device_local_bytes = m_device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 	txt = "gpu_local_mem_size = "+to_string(m_device_local_bytes)+"B";
+	m_log->write(txt);
+		//Limits
+	m_device_max_mem_alloc_size = m_device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
+	txt = "gpu_max_alloc_size = "+to_string(m_device_max_mem_alloc_size)+"B";
 	m_log->write(txt);
 	m_device_max_workgroupsize = m_device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 	txt = "gpu_max_workgroup_size = "+to_string(m_device_max_workgroupsize);
@@ -191,11 +197,13 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	bufferLocalUsage += buf_size;
 
 		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
+	/*
 	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_long);
 	txt= "intBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
 	m_kernel.setArg(5, buf_size, NULL); //Declare only the space size so it can be on local (but this one is too big to be on local)
 	bufferGlobalUsage += buf_size;
+	*/
 
 	//Memory usage from buffer
 	txt = "buffer_global_usage = "+to_string(bufferGlobalUsage)+"B";
@@ -296,13 +304,12 @@ Reminder:
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//This function return the match score of seq2 on seq1. The local array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
-	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global long *intarray){
+	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size){
 		//Test: if same seq then =1 else =0
 		if(seq1_size == seq2_size){
 			bool same=true;
 			for(size_t i=0; i < seq1_size; i++){
 				if(seq1[i] != seq2[i]){
-					intarray[0]=i;
 					same = false;
 					return -i;
 					i = seq1_size;
@@ -314,7 +321,8 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 
 	}
 
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global long *intbufloc){
+	//kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global long *intbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
@@ -349,9 +357,8 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 
 		//Get the global int array buffer
 		//global long *inta = &intbufloc[infos[2]*gid];
-		global long *inta = NULL;
 
 		//Get match score of seq2 on seq1
-		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size);
 	}
 )CLCODE";

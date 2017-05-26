@@ -30,9 +30,10 @@ class WorkerCL {
 
 		//device infos
 		std::string m_device_name="Unknown";
-		size_t m_device_global_bytes=0;
-		size_t m_device_local_bytes=0;
-		size_t m_device_max_workgroupsize=0;
+		size_t m_device_global_bytes=1;
+		size_t m_device_local_bytes=1;
+		size_t m_device_max_workgroupsize=1;
+		size_t m_device_max_mem_alloc_size=1;
 		
 		//CL kernel
 		static std::string kernel_cmp_2_contigs;
