@@ -240,6 +240,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 			The localisation (global or local) of buffer with NULL value is decided by the kernel parameter
 			('global long* intarray' or 'local long* intarray').
 		*/
+	/*
 	m_log->write("Prepare work-items buffers");
 	buf_size = longuest_contig_size*work_group_size*sizeof(cl_char);
 	txt= "charBufferGroup = "+to_string(buf_size)+"B";
@@ -251,6 +252,7 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 		throw(txt);
 	}
 	bufferLocalUsage += buf_size;
+	*/
 
 
 	//Memory usage from buffer
@@ -439,8 +441,8 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		}
 		*/
 			//Calculat the begin of this seq in ultraseq
-		start = 0;
-		for(unsigned long i=°; i < seq1_id; i++){start += seqs_sizes[i];}
+		unsigned long start = 0;
+		for(unsigned long i=0; i < seq1_id; i++){start += seqs_sizes[i];}
 			//get seq
 		global char* seq1 = &ultraseq[start];
 		
