@@ -306,11 +306,12 @@ Reminder:
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//This function return the match score of seq2 on seq1. The local array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
-	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size){
+	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global long *intarray){
 		//Test: if same seq then =1 else =-pos_of_diff
 		size_t min_size = (seq1_size < seq2_size)?seq1_size:seq2_size;
 		for(size_t i=0; i < min_size; i++){
 			if(seq1[i] != seq2[i]){
+				intarray[i] = -i;
 				return -i;
 			}
 		}
@@ -351,10 +352,11 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		
 		unsigned long seq2_start = start; //DEBUG
 
-		//Get the global int array buffer
+		//Get the global int array buffer (it's an array of nbElem*longuestContig of long),
+		//so the sub_array to this work item is at the position longuestContig*global_id
 		global long *inta = &intbufloc[infos[2]*gid];
 
 		//Get match score of seq2 on seq1
-		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size);
+		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
 	}
 )CLCODE";
