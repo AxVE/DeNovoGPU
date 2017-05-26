@@ -197,13 +197,15 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	bufferLocalUsage += buf_size;
 
 		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
-	/*
 	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_long);
 	txt= "intBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
-	m_kernel.setArg(5, buf_size, NULL); //Declare only the space size so it can be on local (but this one is too big to be on local)
+	cl::Buffer buf_intarray (m_context, CL_MEM_READ_WRITE, buf_size);
+	cl_long* intarray = new cl_long[longuest_contig_size*nbGlobalElem];
+	for(size_t i=0; i < longuest_contig_size*nbGlobalElem; i++){intarray[i]=0;}
+	m_commandqueue.enqueueWriteBuffer(buf_intarray, CL_TRUE, 0, buf_size, intarray);
+	m_kernel.setArg(5, buf_intarray);
 	bufferGlobalUsage += buf_size;
-	*/
 
 	//Memory usage from buffer
 	txt = "buffer_global_usage = "+to_string(bufferGlobalUsage)+"B";
@@ -305,24 +307,18 @@ Reminder:
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//This function return the match score of seq2 on seq1. The local array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
 	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size){
-		//Test: if same seq then =1 else =0
-		if(seq1_size == seq2_size){
-			bool same=true;
-			for(size_t i=0; i < seq1_size; i++){
-				if(seq1[i] != seq2[i]){
-					same = false;
-					return -i;
-					i = seq1_size;
-				}
+		//Test: if same seq then =1 else =-pos_of_diff
+		size_t min_size = (seq1_size < seq2_size)?seq1_size:seq2_size;
+		for(size_t i=0; i < min_size; i++){
+			if(seq1[i] != seq2[i]){
+				return -i;
 			}
-			if(same){return 1;}
 		}
-		return 0;
+		return 1;
 
 	}
 
-	//kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global long *intbufloc){
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global long *intbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
@@ -356,7 +352,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		unsigned long seq2_start = start; //DEBUG
 
 		//Get the global int array buffer
-		//global long *inta = &intbufloc[infos[2]*gid];
+		global long *inta = &intbufloc[infos[2]*gid];
 
 		//Get match score of seq2 on seq1
 		scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size);
