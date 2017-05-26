@@ -480,7 +480,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			
 			//Get the global int array buffer (it's an array of nbElem*longuestContig of long),
 			//so the sub_array to this work item is at the position longuestContig*global_id
-			global long *inta = &intbufloc[infos[2]*gid];
+			global short *inta = &intbufloc[infos[2]*gid];
 
 			//Get match score of seq2 on seq1
 			//scores[seq1_id+nbContigs*seq2_id]=score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
@@ -493,9 +493,13 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 				seq2[i] = c;
 			}
 				//Don't forget the middle nuc if seq2_size is odd
-			if(seq2_size%2){seq2[seq2_size/2]=complement[seq2_size/2];}
+			if(seq2_size%2){seq2[seq2_size/2]=complement(seq2[seq2_size/2]);}
 				//get score with reverse complement
 			char s_reverse = score_2_seq(seq1, seq1_size, seq2, seq2_size, inta);
+
+				//Get best score
+			if(s_reverse > s_normal){scores[seq1_id+nbContigs*seq2_id] = s_reverse * -1;}
+			else{scores[seq1_id+nbContigs*seq2_id] = s_normal;}
 
 		}
 		else{ //same sequences
