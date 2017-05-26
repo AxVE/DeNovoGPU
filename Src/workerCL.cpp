@@ -208,6 +208,26 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	delete ultraSequence; //Clean  the memory
 	ultraSequence = nullptr;
 
+		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
+	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_short);
+	txt= "intBufferGroup = "+to_string(buf_size)+"B";
+	m_log->write(txt);
+	cl::Buffer buf_intarray (m_context, CL_MEM_READ_WRITE, buf_size);
+	cl_short* intarray = new cl_short[longuest_contig_size*nbGlobalElem];
+	for(size_t i=0; i < longuest_contig_size*nbGlobalElem; i++){intarray[i]=0;}
+	state = m_commandqueue.enqueueWriteBuffer(buf_intarray, CL_TRUE, 0, buf_size, intarray);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error while writing intarray buffer ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+	state = m_kernel.setArg(4, buf_intarray);
+	if(state != CL_SUCCESS){
+		txt = "OPENCL: Error setting arg 4 intarray ("+to_string(state)+")";
+		m_log->write(txt);
+		throw(txt);
+	}
+	bufferGlobalUsage += buf_size;
 		//buffers for work items
 		/*
 			They need 1 array for need1a and 1 array for the one contig as the another one is only read once per work-item,
@@ -224,34 +244,14 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	buf_size = longuest_contig_size*work_group_size*sizeof(cl_char);
 	txt= "charBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
-	state = m_kernel.setArg(4, buf_size, NULL); //Declare only the space size so it can be on local
+	state = m_kernel.setArg(5, buf_size, NULL); //Declare only the space size so it can be on local
 	if(state != CL_SUCCESS){
-		txt = "OPENCL: Error setting arg 4 local_char_array ("+to_string(state)+")";
+		txt = "OPENCL: Error setting arg 5 local_char_array ("+to_string(state)+")";
 		m_log->write(txt);
 		throw(txt);
 	}
 	bufferLocalUsage += buf_size;
 
-		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
-	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_short);
-	txt= "intBufferGroup = "+to_string(buf_size)+"B";
-	m_log->write(txt);
-	cl::Buffer buf_intarray (m_context, CL_MEM_READ_WRITE, buf_size);
-	cl_short* intarray = new cl_short[longuest_contig_size*nbGlobalElem];
-	for(size_t i=0; i < longuest_contig_size*nbGlobalElem; i++){intarray[i]=0;}
-	state = m_commandqueue.enqueueWriteBuffer(buf_intarray, CL_TRUE, 0, buf_size, intarray);
-	if(state != CL_SUCCESS){
-		txt = "OPENCL: Error while writing intarray buffer ("+to_string(state)+")";
-		m_log->write(txt);
-		throw(txt);
-	}
-	state = m_kernel.setArg(5, buf_intarray);
-	if(state != CL_SUCCESS){
-		txt = "OPENCL: Error setting arg 5 intarray ("+to_string(state)+")";
-		m_log->write(txt);
-		throw(txt);
-	}
-	bufferGlobalUsage += buf_size;
 
 	//Memory usage from buffer
 	txt = "buffer_global_usage = "+to_string(bufferGlobalUsage)+"B";
@@ -415,7 +415,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		return 100*best/min_size;
 	}
 
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global short *intbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq,__global short *intbufloc, __local char *charbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
