@@ -233,11 +233,11 @@ vector< vector<int8_t> > WorkerCL::run(const Contigs& contigs, size_t work_group
 	bufferLocalUsage += buf_size;
 
 		// Each work item have need an int array. As it is on global, the buffer size must have nbContigs^2 elements (the number of work items in total)
-	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_long);
+	buf_size = longuest_contig_size*nbGlobalElem*sizeof(cl_short);
 	txt= "intBufferGroup = "+to_string(buf_size)+"B";
 	m_log->write(txt);
 	cl::Buffer buf_intarray (m_context, CL_MEM_READ_WRITE, buf_size);
-	cl_long* intarray = new cl_long[longuest_contig_size*nbGlobalElem];
+	cl_short* intarray = new cl_short[longuest_contig_size*nbGlobalElem];
 	for(size_t i=0; i < longuest_contig_size*nbGlobalElem; i++){intarray[i]=0;}
 	state = m_commandqueue.enqueueWriteBuffer(buf_intarray, CL_TRUE, 0, buf_size, intarray);
 	if(state != CL_SUCCESS){
@@ -364,12 +364,12 @@ Reminder:
 
 string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 	//This function return the match score of seq2 on seq1. The array buffer intarray must be (at least) of the size of seq1 (so seq1_size).
-	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global long *intarray){
+	long score_2_seq(local char *seq1, unsigned long seq1_size, global char *seq2, unsigned long seq2_size, global short *intarray){
 		/*
 		 * Using the need1a algorithm (needleman but with only a 1D int array of seq1 size instead of a 2D array (seq1*seq2 sizes))
 		*/
-		long best=0; //Use to find the best score
-		long previous_align_score = 0;//Use to keep in memory the previous "(mis)match" score
+		short best=0; //Use to find the best score
+		short previous_align_score = 0;//Use to keep in memory the previous "(mis)match" score
 		//Doing first char of seq2 (can start everywhere in seq1)
 		for(size_t i=0; i < seq1_size; i++){
 			if(seq1[i]==seq2[0]){intarray[i]=1;}
@@ -410,7 +410,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		return 100*best/min_size;
 	}
 
-	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global long *intbufloc){
+	kernel void cmp_2_contigs(__global unsigned long *infos, __global char *scores, __global unsigned long *seqs_sizes, __global char *ultraseq, __local char *charbufloc, __global short *intbufloc){
 		size_t gid = get_global_id(0);
 		size_t seq2_id = gid/infos[0];
 		size_t seq1_id = gid - seq2_id*infos[0];
