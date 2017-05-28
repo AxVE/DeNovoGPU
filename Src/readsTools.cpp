@@ -261,34 +261,33 @@ const int ReadsTools::scoreMatchingReads(const string& read1, const string& read
 	size_t len2 = read2.size();
 
 	//Prepare the scoring arrays
-	int* previous = new int[len2];
-	int* current = new int[len2];
+	int* previous = new int[len1];
+	int* current = new int[len1];
 	int bestIN = 0; //bestIN is the best case of seq2 being completly inside seq1
 	
-	//Calculate the first line (seq2 againt seq1[0]
-	//Note: we can't 'allow' a gap in seq2's "first nuc"
+	//Calculate the first line (seq2[0] againt seq1)
 	previous[0] = ((read1[0]==read2[0])?1:-1);
-	for(size_t j=1; j < len2; j++){ previous[j] = -j; }
-	bestIN = previous[len2-1];
+	for(size_t i=0; i < len1; i++){ previous[i] = ((read2[0]==read1[i])?1:-1);}
+	bestIN = previous[len1-1];
 
 	//Complete the needle comparison
-	for(size_t i=1; i < len1; i++){
-		//Test the seq2's first nuc, a gap is allowed so it's just a (mis)match
-		current[0] = ((read1[i]==read2[0])?1:-1);
+	for(size_t j=1; j < len2; j++){
+		//Test the seq1's first nuc:  is an indel as the first need to be seq2[0]
+		current[0] = previous[0]-1;
 		
-		//Finish the line
-		for(size_t j=1; j < len2; j++){
+		//Do others nucs of seq1
+		for(size_t i=1; i < len1; i++){
 			//current[j] is the best of a match/mistach and both indels possibilities
 			//Match/mismatch ?
-			current[j] = previous[j-1] + ((read1[i]==read2[j])?1:-1);
+			current[i] = previous[i-1] + ((read1[i]==read2[j])?1:-1);
 
 			//indels ?
-			current[j] = ((previous[j]-1 > current[j])?previous[j]-1:current[j]);
-			current[j] = ((current[j-1]-1 > current[j])?current[j-1]-1:current[j]);
+			current[i] = previous[i]-1;
+			current[i] = current[i-1]-1;
 		}
 
 		// Best of read2 being inside read1 ?
-		bestIN = ((current[len2-1] > bestIN)?current[len2-1]:bestIN);
+		bestIN = ((current[len1-1] > bestIN)?current[len1-1]:bestIN);
 
 		//swap previous and current arrays
 		int* swapbuf = previous;
@@ -297,7 +296,7 @@ const int ReadsTools::scoreMatchingReads(const string& read1, const string& read
 	}
 
 	//get the best score
-	for(size_t j=0; j<len2;j++){ bestIN = ((previous[j]>bestIN)?previous[j]:bestIN);}
+	for(size_t i=0; i<len1; i++){ bestIN = ((previous[i]>bestIN)?previous[i]:bestIN);}
 	if(bestIN < 0){bestIN=0;} //security: we want a score >= 0
 	int theomax = ((len1<len2)?len1:len2);
 
