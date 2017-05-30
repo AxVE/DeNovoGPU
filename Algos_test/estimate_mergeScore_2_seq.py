@@ -50,7 +50,7 @@ def main(seqs):
 			print("need1a"+coupleDescript+analyzeFct(need1array,seqs[i],seqs[j]))
 
 			#dot_cut
-			print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
+			#print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
 
 '''
 Tool function to run an cmp function and get (and output) its informations
@@ -96,7 +96,6 @@ def needle(seq1, seq2):
 
 	#Fill the remaining of the matrix
 	#Keep the best possibilities with the end of seq2 (seq2 is inside seq1)
-	bestIN=0
 	for i in range(1,len1):
 		for j in range(1,len2):
 			# Match / mismatch ?
@@ -109,18 +108,16 @@ def needle(seq1, seq2):
 			# keep best
 			matrix[i][j] = max(match, i1, i2)
 
-		# Best seq2 inside seq 1 ?
-		if(matrix[i][len2-1] > bestIN): bestIN = matrix[i][len2-1]
-			
-	# Get the list of best concurrents
-	best_co = matrix[len1-1][:]
+	# Get the list of best concurrents (end of seq1 and seq2 continue after, or end of seq2 (seq2 is inside seq1))
+            #end of seq1
+	best_co = matrix[-1][:]
+            #end of seq2
 	for i in range(len1):
-		best_co.append(matrix[i][-1])
-	#Add the se2 is in seq1 possibility
-	best_co.append(bestIN)
-
-	# Get score
-	return 100*max(best_co)/min(len1,len2)
+	    best_co.append(matrix[i][-1])
+	#Get scores
+	best = max(best_co)
+	if(best<0):best=0
+	return 100*best/min(len1,len2)
 
 '''
 Algorithm 'Need2Arrays
@@ -169,6 +166,8 @@ def need2arrays(seq1, seq2):
 	
 	# Get the best possibilities score which is inside the last line + the bestIN (pseudo last column)
 	previous.append(bestIN) #Previous is last because we moved buffers. We add bestIN to it
+	best=max(previous)
+	if(best<0):best=0
 	return 100*max(previous)/min(len1,len2) #Percent and normalize by theorical max best score (full match)
 
 '''
@@ -194,7 +193,7 @@ def need1array(seq1, seq2):
     for j in range(1, len2):
         previous_align_score = scores[0]
         # first nuc of seq1 : Is an indel (as the first is forced to be seq2[0])
-        scores[0]=scores[0]-1
+        scores[0]=-j
         
         #Do other nucs
         for i in range (1, len1):
@@ -214,7 +213,8 @@ def need1array(seq1, seq2):
 
     #Check the best is not when seq2 ends in seq1
     bs = max(scores)
-    if bs > best: best = bs
+    if(bs > best): best = bs
+    if(best<0):best=0
 
     #return best
     return 100*best/min(len1,len2)
