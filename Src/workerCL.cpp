@@ -439,6 +439,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		}
 	
 		//Send best score in %
+		if(best < 0){best=0;}
 		unsigned long min_size = (seq1_size < seq2_size)?seq1_size:seq2_size;
 		return 100*best/min_size;
 	}
