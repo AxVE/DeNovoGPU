@@ -50,7 +50,7 @@ def main(seqs):
 			print("need1a"+coupleDescript+analyzeFct(need1array,seqs[i],seqs[j]))
 
 			#dot_cut
-			#print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
+			print("dot_cut"+coupleDescript+analyzeFct(dot_cut,seqs[i],seqs[j]))
 
 '''
 Tool function to run an cmp function and get (and output) its informations
