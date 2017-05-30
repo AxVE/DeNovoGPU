@@ -414,8 +414,8 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		for(size_t j=1; j < seq2_size; j++){
 			previous_align_score = intarray[0];
 
-			//Against first char of seq1: is an indel so it's previous -1
-			intarray[0] = intarray[0]-1;
+			//Against first char of seq1: is an indel so it's -1*number_of_missing_nuc
+			intarray[0] = -j;
 			
 			//Do others nucs
 			for(size_t i=1; i < seq1_size; i++){
@@ -491,7 +491,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 			for(size_t i=0; i < seq2_size/2; i++){
 				char c = complement(seq2[i]);
 				seq2[i] = complement(seq2[seq2_size-1-i]);
-				seq2[i] = c;
+				seq2[seq2_size-1-i] = c;
 			}
 				//Don't forget the middle nuc if seq2_size is odd
 			if(seq2_size%2){seq2[seq2_size/2]=complement(seq2[seq2_size/2]);}
