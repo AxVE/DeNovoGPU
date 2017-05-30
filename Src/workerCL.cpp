@@ -407,7 +407,7 @@ string WorkerCL::kernel_cmp_2_contigs = R"CLCODE(
 		//Doing first char of seq2 (can start everywhere in seq1)
 		for(size_t i=0; i < seq1_size; i++){
 			if(seq1[i]==seq2[0]){intarray[i]=1;}
-			else{intarray[i]=0;}
+			else{intarray[i]=-1;}
 		}
 		best = intarray[seq1_size-1];
 		//Doing the rest of seq2
